@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head><meta charset="UTF-8"><title>Test Application Form</title></head>
+<body>
+  <h1>测试申请表</h1>
+  <form id="app-form">
+    <div><label for="name">姓名</label><input id="name" name="name" type="text"></div>
+    <div><label for="email">邮箱</label><input id="email" name="email" type="email"></div>
+    <div><label for="phone">手机号</label><input id="phone" name="phone" type="tel"></div>
+    <div><label for="gender">性别</label>
+      <select id="gender" name="gender">
+        <option value="">请选择</option><option value="male">男</option><option value="female">女</option>
+      </select>
+    </div>
+    <div><label for="school">学校</label><input id="school" name="school" type="text"></div>
+    <div><label for="major">专业</label><input id="major" name="major" type="text"></div>
+    <div><label for="degree">学历</label>
+      <select id="degree" name="degree">
+        <option value="">请选择</option><option value="bachelor">本科</option><option value="master">硕士</option><option value="phd">博士</option>
+      </select>
+    </div>
+    <div><label for="salary">期望薪资</label><input id="salary" name="salary" type="text" placeholder="如 15-25K"></div>
+  </form>
+</body>
+</html>
