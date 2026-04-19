@@ -82,7 +82,12 @@ export type CapturedFieldKind =
 export interface CapturedField {
   /** 稳定选择器：优先 `#id`，否则 tag+type+nth-of-type 路径 */
   selector: string;
-  /** 同 (selector) 多实例时的页面内出现序号，从 0 开始 */
+  /**
+   * 同签名字段在页面内的出现序号（DOM 顺序），从 0 开始。
+   * 同签名字段不只在草稿恢复用到，更是页面记忆匹配的关键。
+   * 恢复时优先 selector 命中；命中失败或 selector 定位多个时，用 (signature, index)
+   * 在 DOM 中按顺序取第 N 个同签名元素作为兜底。
+   */
   index: number;
   kind: CapturedFieldKind;
   /** select/radio: 选中的 value；checkbox: 'true'/'false'；其余: 原始值 */
@@ -265,7 +270,8 @@ WRITE_BACK_TO_RESUME { pairs: Array<{resumePath, value}> }
    - 若 `skipSensitive=true` 且 label/name/placeholder/aria-label 命中 `SENSITIVE_PATTERNS` → 跳过。
    - 单字段 `value.length >= MAX_FIELD_SIZE` → 跳过，计入 `skipped` 列表。
    - 生成 `selector`：优先 `#${CSS.escape(id)}`，否则 `tagName[type]:nth-of-type(n)` 的组合路径。
-   - 按 (selector 字符串) 分组，同字符串者依次分配 `index=0, 1, 2...`。
+   - 计算 `signature = hash(label | name | placeholder | aria-label)`。
+   - `index`：按 DOM 顺序在同 signature 组内递增（0, 1, 2...）。此 index 对 draft 恢复和 page memory 匹配都成立。
    - 同名 radio group 只保留选中那个（group 按 `name` 判断）。
 2. 若 `sum(value.length) >= MAX_TOTAL_SIZE`，按 `value.length` 倒序丢弃直到 ≤ 限额。
 3. 发 `SAVE_DRAFT`；background 写入 `formpilot:drafts[normalizeUrlForDraft(url)]`，**覆盖旧值**。
@@ -273,9 +279,10 @@ WRITE_BACK_TO_RESUME { pairs: Array<{resumePath, value}> }
 
 **恢复（徽章点 `恢复`）**：
 
-1. `restoreFields(document, fields)`：
-   - 对每个 field，用 `document.querySelectorAll(selector)` 取到同 selector 的全部元素，按 `index` 选第 N 个。
-   - 若元素不存在 → 记入 `missing` 计数，跳过。
+1. `restoreFields(document, fields)` 恢复顺序：
+   - 第一步（selector 命中）：`document.querySelector(selector)` 唯一命中时直接使用。
+   - 第二步（签名兜底）：selector 命中 0 或多个时，按页面 DOM 顺序筛出同 `signature` 的元素，取第 `index` 个。
+   - 两步都失败 → 记入 `missing` 计数，跳过。
    - 按 `kind` 分发：text/textarea → `fillElement` + 触发事件；select → 按 value 选中；radio → `checked=true` + change；checkbox → `checked=bool` + change。
    - 成功恢复的元素打标 `data-formpilot-restored="draft"`。
 2. 调用 `applyFieldHighlights` 但 status 为 `'draft'` → 青色 `#22d3ee`。
