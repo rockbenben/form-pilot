@@ -5,7 +5,7 @@
 <h1 align="center">FormPilot</h1>
 
 <p align="center">
-  A general-purpose browser extension for filling forms
+  One-click resume apply across job boards &middot; Cross-site form memory for anything you've answered before
 </p>
 
 <p align="center">
@@ -15,7 +15,7 @@
   <a href="#adding-a-platform-adapter">Extend</a>
 </p>
 
-> 365 Open Source Project #008 &middot; Save, restore, and auto-fill any form — from job applications to surveys.
+> 365 Open Source Project #008 &middot; One profile, every ATS. Every answer you've typed, remembered. Save, restore, and auto-fill any form.
 
 ---
 
