@@ -59,7 +59,7 @@ pnpm run build
 
 **Usage:**
 
-- Click the extension icon → **Manage Profiles** → fill in your profile data in the Dashboard
+- Click the extension icon → **Edit Profile** → fill in your profile data in the Dashboard
 - Navigate to a form page → click the floating **Fill** button, or use **Fill Current Page** from the popup
 - Use the floating **💾** menu to:
   - **📝 Save Draft** — snapshot this page so you can restore it later

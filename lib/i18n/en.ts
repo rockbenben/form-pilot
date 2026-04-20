@@ -115,7 +115,7 @@ export const en = {
 
   'tag.placeholder': 'Type and press Enter',
 
-  'popup.tagline': 'Form-filling helper',
+  'popup.tagline': 'Apply once · Fill anywhere',
   'popup.currentResume': 'Current Profile',
   'popup.noResume': 'No profile created',
   'popup.edit': 'Edit Profile',

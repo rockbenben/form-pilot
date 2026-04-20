@@ -131,7 +131,7 @@ export const zh = {
   'tag.placeholder': '输入后按 Enter 添加',
 
   // Popup
-  'popup.tagline': '通用表单助手',
+  'popup.tagline': '一键投递 · 跨站复填',
   'popup.currentResume': '当前资料',
   'popup.noResume': '未创建资料',
   'popup.edit': '编辑资料',
