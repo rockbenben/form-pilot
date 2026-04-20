@@ -7,6 +7,8 @@ interface FloatingToolbarProps {
   filling: boolean;
   fillResult: { filled: number; total: number } | null;
   onToggleResult: () => void;
+  onToggleSaveMenu: () => void;
+  saveMenuOpen: boolean;
   t: (key: string) => string;
 }
 
@@ -16,6 +18,8 @@ export default function FloatingToolbar({
   filling,
   fillResult,
   onToggleResult,
+  onToggleSaveMenu,
+  saveMenuOpen,
   t,
 }: FloatingToolbarProps) {
   const [dragging, setDragging] = useState(false);
@@ -127,6 +131,29 @@ export default function FloatingToolbar({
         title={fillResult ? t('toolbar.result') : t('toolbar.progress')}
       >
         {fillResult ? `${fillResult.filled}/${fillResult.total}` : '\u2014'}
+      </button>
+      <button
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          backgroundColor: saveMenuOpen ? '#6b7280' : '#4b5563',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '6px',
+          padding: '6px 10px',
+          fontSize: '13px',
+          cursor: 'pointer',
+          outline: 'none',
+          whiteSpace: 'nowrap',
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleSaveMenu();
+        }}
+        title={t('toolbar.save')}
+      >
+        &#x1F4BE;
       </button>
     </div>
   );

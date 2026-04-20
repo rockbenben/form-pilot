@@ -67,6 +67,26 @@ export async function deleteResume(id: string): Promise<void> {
   await writeAll(all.filter((r) => r.meta.id !== id));
 }
 
+/**
+ * Rename a resume. Trims whitespace; empty names throw instead of silently
+ * clearing the label. Bumps updatedAt.
+ */
+export async function renameResume(id: string, newName: string): Promise<Resume> {
+  const trimmed = newName.trim();
+  if (!trimmed) throw new Error('Resume name cannot be empty');
+  const all = await readAll();
+  const idx = all.findIndex((r) => r.meta.id === id);
+  if (idx === -1) throw new Error(`Resume not found: ${id}`);
+  const existing = all[idx];
+  const updated: Resume = {
+    ...existing,
+    meta: { ...existing.meta, name: trimmed, updatedAt: Date.now() },
+  };
+  all[idx] = updated;
+  await writeAll(all);
+  return updated;
+}
+
 // ─── Active resume ────────────────────────────────────────────────────────────
 
 export async function getActiveResumeId(): Promise<string | null> {

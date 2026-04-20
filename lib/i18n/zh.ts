@@ -1,7 +1,7 @@
 export const zh = {
   // App
   'app.name': 'FormPilot',
-  'app.subtitle': '简历管理 · 自动填写 · 智能匹配',
+  'app.subtitle': '个人资料 · 自动填写 · 智能匹配',
 
   // Sidebar
   'nav.basic': '基本信息',
@@ -13,10 +13,13 @@ export const zh = {
   'nav.custom': '自定义',
   'nav.settings': '设置',
 
-  // Resume selector
-  'resume.new': '+ 新简历',
-  'resume.default': '简历',
+  // Profile selector
+  'resume.new': '+ 新资料',
+  'resume.default': '资料',
+  'resume.delete': '删除',
   'resume.delete.confirm': '确定删除？',
+  'resume.rename': '重命名',
+  'resume.hint': '点击切换 · 双击重命名',
 
   // Status bar
   'status.fields': '字段',
@@ -110,13 +113,13 @@ export const zh = {
   'settings.apiKeyHint': 'API Key 仅存储在本地，用于 AI 语义分析兜底。不填则仅使用本地规则匹配。',
 
   // Import dialog
-  'import.title': '导入简历',
+  'import.title': '导入资料',
   'import.json': 'JSON 文件',
   'import.resume': 'PDF / Word',
   'import.click': '点击选择文件',
   'import.close': '关闭',
   'import.success.json': 'JSON 导入成功',
-  'import.success.resume': '简历导入成功，请检查并补充信息',
+  'import.success.resume': '资料导入成功，请检查并补充信息',
   'import.error.format': '仅支持 PDF 和 DOCX 格式',
   'import.parsing': '正在解析...',
 
@@ -128,12 +131,16 @@ export const zh = {
   'tag.placeholder': '输入后按 Enter 添加',
 
   // Popup
-  'popup.currentResume': '当前简历',
-  'popup.noResume': '未创建简历',
-  'popup.manage': '管理简历',
+  'popup.tagline': '通用表单助手',
+  'popup.currentResume': '当前资料',
+  'popup.noResume': '未创建资料',
+  'popup.edit': '编辑资料',
   'popup.fill': '填写当前页面',
   'popup.fill.success': '填写完成',
-  'popup.fill.error': '填写失败，请确认当前页面有表单',
+  'popup.fill.error': '填写失败。如果刚安装插件或页面在安装前已打开，请刷新页面后重试',
+  'popup.progress': '已填 {filled} / {total} 项（{pct}%）',
+  'popup.hint.firstTime': '先在「编辑资料」里填常用信息，打开网页后点「填写当前页面」一键填入',
+  'popup.settingsOpen': '打开设置',
 
   // Status
   'status.saving': '保存中...',
@@ -146,4 +153,56 @@ export const zh = {
   'toolbar.filled': '已填',
   'toolbar.uncertain': '需确认',
   'toolbar.unrecognized': '未识别',
+
+  // ── Capture feature ─────────────────────────────────────────────
+  'toolbar.save': '保存',
+
+  'capture.menu.draft': '📝 保存草稿',
+  'capture.menu.writeback': '↩️ 保存到资料',
+  'capture.menu.memory': '🧠 记住本页表单',
+
+  'capture.toast.draft.saved': '已保存 {n} 个字段的草稿',
+  'capture.toast.draft.partial': '已保存 {n} 个，跳过 {m} 个',
+  'capture.toast.writeback.done': '已保存 {n} 个字段到「{name}」',
+  'capture.toast.memory.saved': '已记住本页 {n} 个字段',
+  'capture.toast.nothingToWriteBack': '当前页没有可保存的字段',
+  'capture.toast.noActiveResume': '请先选择一份活动资料',
+  'capture.toast.storageFull': '存储空间不足，请在 Dashboard 清理',
+
+  'capture.badge.detected': '检测到 {n} 个字段的草稿（{time}）',
+  'capture.badge.restore': '恢复',
+  'capture.badge.restoreAndFill': '恢复并继续填充',
+  'capture.badge.ignore': '忽略',
+  'capture.badge.delete': '删除',
+  'capture.badge.restored': '已恢复 {filled}/{total} 个字段',
+
+  'time.justNow': '刚刚',
+  'time.minutesAgo': '{n} 分钟前',
+  'time.hoursAgo': '{n} 小时前',
+  'time.daysAgo': '{n} 天前',
+
+  'nav.savedPages': '已保存页面',
+  'savedPages.drafts.title': '草稿',
+  'savedPages.drafts.empty': '暂无草稿',
+  'savedPages.memory.title': '页面记忆',
+  'savedPages.memory.empty': '暂无页面记忆',
+  'savedPages.form.title': '表单记录',
+  'savedPages.form.empty': '暂无跨站表单记录',
+  'savedPages.form.clearAll': '全部清空',
+  'savedPages.form.column.label': '字段',
+  'savedPages.form.column.value': '保存值',
+  'savedPages.form.column.hits': '次数',
+  'savedPages.form.column.source': '来源 URL',
+  'savedPages.column.url': '网址',
+  'savedPages.column.savedAt': '保存时间',
+  'savedPages.column.fields': '字段数',
+  'savedPages.column.actions': '操作',
+  'savedPages.action.view': '查看',
+  'savedPages.action.delete': '删除',
+
+  'settings.capture.title': '保存/恢复',
+  'settings.capture.skipSensitive': '跳过敏感字段（身份证、验证码等）',
+  'settings.capture.allowedDomains': '自动启用的域名',
+  'settings.capture.allowedDomains.reset': '恢复默认',
+  'settings.capture.allowedDomainsHint': '每行一个域名，也支持逗号分隔（后缀匹配，例如 mokahr.com 涵盖 jobs.mokahr.com）。不在列表里的页面不会自动出现工具栏；如果该 URL 有草稿或页面记忆，或你从 popup 点击"填写当前页面"，仍会激活。',
 };

@@ -8,6 +8,7 @@ import {
   exportResume,
   getActiveResumeId,
   listResumes,
+  renameResume,
   setActiveResumeId,
   updateResume,
 } from '@/lib/storage/resume-store';
@@ -25,6 +26,7 @@ import SkillsSection from '@/components/popup/sections/Skills';
 import JobPreferenceSection from '@/components/popup/sections/JobPreference';
 import CustomFieldsSection from '@/components/popup/sections/CustomFields';
 import SettingsSection from '@/components/popup/sections/Settings';
+import SavedPagesSection from '@/components/popup/sections/SavedPages';
 
 export default function App() {
   const i18n = useI18nProvider();
@@ -57,11 +59,48 @@ export default function App() {
 
   // ─── Hash routing on mount ────────────────────────────────────────────────
 
+  const VALID_SECTIONS: SectionId[] = [
+    'basic', 'education', 'work', 'projects', 'skills',
+    'jobPreference', 'custom', 'savedPages', 'settings',
+  ];
+
   useEffect(() => {
     const hash = window.location.hash.slice(1);
-    if (hash && ['basic', 'education', 'work', 'projects', 'skills', 'jobPreference', 'custom', 'settings'].includes(hash)) {
+    if (hash && (VALID_SECTIONS as string[]).includes(hash)) {
       setSection(hash as SectionId);
     }
+  }, []);
+
+  // Reflect section changes in the URL hash. Skip the very first render —
+  // otherwise a deep link (#settings) flickers to the initial state's hash
+  // (#basic) before the hash-read effect's setSection has committed.
+  const didSyncHash = useRef(false);
+  useEffect(() => {
+    if (!didSyncHash.current) {
+      didSyncHash.current = true;
+      return;
+    }
+    if (typeof window === 'undefined') return;
+    if (window.location.hash.slice(1) !== section) {
+      window.history.replaceState(null, '', `#${section}`);
+    }
+  }, [section]);
+
+  // Browser back / forward / manual URL edit → update the rendered section.
+  useEffect(() => {
+    function onHashChange() {
+      const h = window.location.hash.slice(1);
+      if ((VALID_SECTIONS as string[]).includes(h)) {
+        setSection(h as SectionId);
+      }
+    }
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  // ─── Cleanup pending-save timer on unmount ────────────────────────────────
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
   // ─── Load on mount ────────────────────────────────────────────────────────
@@ -149,9 +188,28 @@ export default function App() {
     if (activeId === id) {
       const nextId = remaining.length > 0 ? remaining[0].meta.id : null;
       setActiveId(nextId);
-      if (nextId) await setActiveResumeId(nextId);
+      if (nextId) {
+        await setActiveResumeId(nextId);
+      } else {
+        // No profiles left — clear the stored pointer so init() on next
+        // launch doesn't chase an orphan id. (The UI's canDelete = > 1
+        // guard normally prevents landing here, but be explicit.)
+        await chrome.storage.local.remove('formpilot:activeResumeId');
+      }
     }
   }, [flushPendingSave, resumes, activeId]);
+
+  const handleRenameResume = useCallback(async (id: string, newName: string) => {
+    // Flush any in-flight field edit first so the debounced updateResume
+    // doesn't race the rename by writing a stale meta.name back.
+    await flushPendingSave();
+    try {
+      const updated = await renameResume(id, newName);
+      setResumes((prev) => prev.map((r) => (r.meta.id === id ? updated : r)));
+    } catch (err) {
+      console.error('Rename failed:', err);
+    }
+  }, [flushPendingSave]);
 
   const handleExport = useCallback(async () => {
     if (!activeId) return;
@@ -162,7 +220,7 @@ export default function App() {
       const a = document.createElement('a');
       a.href = url;
       const resume = resumes.find((r) => r.meta.id === activeId);
-      a.download = `${resume?.meta.name ?? 'resume'}.json`;
+      a.download = `${resume?.meta.name ?? 'profile'}.json`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -175,6 +233,10 @@ export default function App() {
   function renderContent() {
     if (section === 'settings') {
       return <SettingsSection />;
+    }
+
+    if (section === 'savedPages') {
+      return <SavedPagesSection />;
     }
 
     if (!activeResume) {
@@ -250,8 +312,8 @@ export default function App() {
       {/* Top header */}
       <div className="shrink-0 border-b border-gray-800 bg-gray-950">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
-          <span className="text-base font-bold text-blue-400">{i18n.t('app.name')}</span>
-          <span className="text-sm text-gray-500">{i18n.t('app.subtitle')}</span>
+          <span className="text-base font-bold text-blue-400">⚡ {i18n.t('app.name')}</span>
+          <span className="text-sm text-gray-500 hidden sm:inline">{i18n.t('app.subtitle')}</span>
           <div className="flex-1" />
           {/* Save indicator */}
           {saveStatus === 'saving' && <span className="text-xs text-gray-500">{i18n.t('status.saving')}</span>}
@@ -264,8 +326,22 @@ export default function App() {
               onSelect={handleSelectResume}
               onCreate={handleCreateResume}
               onDelete={handleDeleteResume}
+              onRename={handleRenameResume}
             />
           </div>
+          {/* Settings — always reachable from the header */}
+          <button
+            onClick={() => setSection('settings')}
+            title={i18n.t('nav.settings')}
+            className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1
+              ${section === 'settings'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+              }`}
+          >
+            <span>⚙️</span>
+            <span className="hidden sm:inline">{i18n.t('nav.settings')}</span>
+          </button>
         </div>
       </div>
 

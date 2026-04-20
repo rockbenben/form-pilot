@@ -1,11 +1,11 @@
 {
   "name": "formpilot",
   "version": "0.1.0",
-  "description": "Job application auto-fill Chrome extension / 网申自动填写浏览器插件",
+  "description": "General-purpose form-filling Chrome extension / 通用表单填写浏览器插件",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "keywords": ["chrome-extension", "autofill", "resume", "job-application", "browser-extension"],
+  "keywords": ["chrome-extension", "autofill", "form-filler", "profile", "browser-extension"],
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",

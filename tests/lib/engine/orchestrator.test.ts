@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { orchestrateFill } from '@/lib/engine/orchestrator';
 import type { Resume } from '@/lib/storage/types';
 import { createEmptyResume } from '@/lib/storage/types';
+import { computeSignatureFor } from '@/lib/capture/signature';
+import type { PageMemoryEntry } from '@/lib/capture/types';
 
 function buildForm(fields: { label: string; name: string; type?: string }[]): HTMLFormElement {
   const form = document.createElement('form');
@@ -43,5 +45,56 @@ describe('orchestrateFill', () => {
     const result = await orchestrateFill(document, resume, null);
     expect(result.unrecognized).toBe(1);
     expect(result.items[0].status).toBe('unrecognized');
+  });
+});
+
+describe('orchestrateFill with page memory', () => {
+  beforeEach(() => { document.body.innerHTML = ''; });
+
+  it('fills unrecognized fields from page memory as Phase 3', async () => {
+    const resume: Resume = createEmptyResume('t', 't');
+    document.body.innerHTML = `
+      <label for="q">你最大的缺点</label>
+      <input id="q" name="weakness" type="text">
+    `;
+    const q = document.getElementById('q')!;
+    const entries: PageMemoryEntry[] = [
+      { signature: computeSignatureFor(q), index: 0, kind: 'text', value: 'I overthink', updatedAt: 0 },
+    ];
+    const result = await orchestrateFill(document, resume, null, entries);
+    expect((q as HTMLInputElement).value).toBe('I overthink');
+    expect(result.items[0].source).toBe('memory');
+    expect(result.items[0].status).toBe('filled');
+    expect(result.items[0].confidence).toBe(1.0);
+  });
+
+  it('does not overwrite already-filled fields with memory', async () => {
+    const resume: Resume = {
+      ...createEmptyResume('t', 't'),
+      basic: { ...createEmptyResume('', '').basic, name: '张三' },
+    };
+    document.body.innerHTML = `<label for="n">姓名</label><input id="n" name="name">`;
+    const el = document.getElementById('n')!;
+    const entries: PageMemoryEntry[] = [
+      { signature: computeSignatureFor(el), index: 0, kind: 'text', value: '李四', updatedAt: 0 },
+    ];
+    const result = await orchestrateFill(document, resume, null, entries);
+    expect((el as HTMLInputElement).value).toBe('张三');
+    expect(result.items[0].source).toBe('heuristic');
+  });
+
+  it('does not overwrite draft-restored fields with memory (Phase 3 skip)', async () => {
+    const resume: Resume = createEmptyResume('t', 't');
+    document.body.innerHTML = `
+      <label for="q">你最大的缺点</label>
+      <input id="q" name="weakness" type="text" value="my draft answer">
+    `;
+    const q = document.getElementById('q') as HTMLInputElement;
+    q.setAttribute('data-formpilot-restored', 'draft');
+    const entries: PageMemoryEntry[] = [
+      { signature: computeSignatureFor(q), index: 0, kind: 'text', value: 'memory answer', updatedAt: 0 },
+    ];
+    await orchestrateFill(document, resume, null, entries);
+    expect(q.value).toBe('my draft answer');
   });
 });

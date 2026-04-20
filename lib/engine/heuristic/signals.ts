@@ -1,4 +1,5 @@
 import type { InputType } from '@/lib/engine/adapters/types';
+import { findLabelText as captureFindLabelText } from '@/lib/capture/signature';
 
 export interface ElementSignals {
   nameAttr: string | null;
@@ -24,39 +25,21 @@ function detectInputType(el: Element): InputType {
     if (type === 'checkbox') return 'checkbox';
     if (type === 'date' || type === 'datetime-local' || type === 'month') return 'date';
   }
+  const ce = el.getAttribute('contenteditable');
+  if (ce === 'true' || ce === '' || ce === 'plaintext-only') return 'contenteditable';
+  if ((el as HTMLElement).isContentEditable) return 'contenteditable';
   return 'text';
 }
 
 /**
- * Find label text for an element by:
- * 1. label[for=id]
- * 2. ancestor <label>
- * 3. nearby text (previous sibling)
+ * Delegate to the shared findLabelText in lib/capture/signature — that one
+ * handles all the edge cases (any `[for=id]` element, fieldset legend,
+ * survey-framework group heading) that arise on non-standard form markup
+ * (问卷星, Select2, jqradio, etc.).
  */
 function findLabelText(el: Element): string | null {
-  const id = el.getAttribute('id');
-  if (id) {
-    const labelEl = el.ownerDocument?.querySelector(`label[for="${id}"]`);
-    if (labelEl) {
-      return labelEl.textContent?.trim() ?? null;
-    }
-  }
-
-  // Walk up to find a wrapping <label>
-  let parent = el.parentElement;
-  while (parent) {
-    if (parent.tagName.toLowerCase() === 'label') {
-      // Get label text without child input text
-      const clone = parent.cloneNode(true) as Element;
-      // Remove any nested input/select/textarea elements from clone
-      clone.querySelectorAll('input, select, textarea').forEach((child) => child.remove());
-      const text = clone.textContent?.trim();
-      if (text) return text;
-    }
-    parent = parent.parentElement;
-  }
-
-  return null;
+  const s = captureFindLabelText(el);
+  return s.length > 0 ? s : null;
 }
 
 /**

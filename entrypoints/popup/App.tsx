@@ -8,8 +8,6 @@ import {
 import { I18nContext, useI18nProvider } from '@/lib/i18n';
 import { countFields } from '@/lib/storage/resume-utils';
 
-// ─── Open dashboard helper ────────────────────────────────────────────────────
-
 function openDashboard(hash?: string) {
   const url = chrome.runtime.getURL('/dashboard.html') + (hash ? '#' + hash : '');
   chrome.tabs.create({ url });
@@ -51,79 +49,91 @@ export default function App() {
 
   const stats = activeResume ? countFields(activeResume) : null;
   const pct = stats && stats.total > 0 ? Math.round((stats.filled / stats.total) * 100) : 0;
+  const isEmpty = !stats || stats.filled === 0;
 
   return (
     <I18nContext.Provider value={i18n}>
-    <div className="w-72 bg-gray-950 text-gray-200 flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-        <span className="text-sm font-bold text-blue-400">{t('app.name')}</span>
-        <button
-          onClick={() => openDashboard('settings')}
-          title={t('nav.settings')}
-          className="text-gray-500 hover:text-gray-200 transition-colors text-base leading-none"
-        >
-          ⚙
-        </button>
+    <div className="w-80 bg-gray-950 text-gray-200 flex flex-col">
+      {/* Header: brand + tagline */}
+      <div className="px-4 py-3 border-b border-gray-800 flex items-baseline gap-2">
+        <span className="text-base font-bold text-blue-400">⚡ {t('app.name')}</span>
+        <span className="text-xs text-gray-500 truncate">{t('popup.tagline')}</span>
       </div>
 
-      {/* Active resume info */}
+      {/* Profile block */}
       <div className="px-4 py-3 border-b border-gray-800">
         {activeResume ? (
           <>
-            <div className="text-xs text-gray-400 mb-1">{t('popup.currentResume')}</div>
+            <div className="text-xs text-gray-500 mb-1">{t('popup.currentResume')}</div>
             <div className="text-sm font-medium text-gray-100 truncate mb-2">
               {activeResume.meta.name || t('resume.default')}
             </div>
-            {/* Progress bar */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 rounded-full transition-all"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <span className="text-xs text-gray-500 shrink-0">{pct}%</span>
+            <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  pct >= 80 ? 'bg-green-500' : pct >= 40 ? 'bg-blue-500' : 'bg-amber-500'
+                }`}
+                style={{ width: `${pct}%` }}
+              />
             </div>
-            {stats && (
-              <div className="text-xs text-gray-600 mt-1">
-                {stats.filled}/{stats.total} {t('status.fields')}
-              </div>
-            )}
+            <div className="text-xs text-gray-500 mt-1.5">
+              {t('popup.progress', { filled: stats!.filled, total: stats!.total, pct })}
+            </div>
           </>
         ) : (
           <div className="text-xs text-gray-500">{t('popup.noResume')}</div>
         )}
       </div>
 
-      {/* Actions */}
-      <div className="px-4 py-3 flex flex-col gap-2">
-        <button
-          onClick={() => openDashboard()}
-          className="w-full py-2 px-3 rounded text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white transition-colors"
-        >
-          {t('popup.manage')}
-        </button>
+      {/* Primary action: fill */}
+      <div className="px-4 pt-3 pb-2">
         <button
           onClick={handleFill}
           disabled={filling || !activeResume}
-          className={`w-full py-2 px-3 rounded text-sm font-medium transition-colors
+          className={`w-full py-2.5 px-3 rounded text-sm font-semibold transition-colors flex items-center justify-center gap-2
             ${activeResume
-              ? 'bg-gray-800 hover:bg-gray-700 text-gray-200'
-              : 'bg-gray-900 text-gray-600 cursor-not-allowed'
+              ? 'bg-blue-600 hover:bg-blue-500 text-white'
+              : 'bg-gray-800 text-gray-500 cursor-not-allowed'
             }
             ${filling ? 'opacity-60 cursor-wait' : ''}`}
         >
-          {filling ? '...' : t('popup.fill')}
+          <span>⚡</span>
+          <span>{filling ? '...' : t('popup.fill')}</span>
         </button>
-
         {fillResult === 'ok' && (
-          <p className="text-xs text-green-400 text-center">{t('popup.fill.success')}</p>
+          <p className="text-xs text-green-400 text-center mt-2">{t('popup.fill.success')}</p>
         )}
         {fillResult === 'err' && (
-          <p className="text-xs text-red-400 text-center">{t('popup.fill.error')}</p>
+          <p className="text-xs text-red-400 text-center mt-2 leading-snug">{t('popup.fill.error')}</p>
         )}
       </div>
+
+      {/* Secondary actions: edit + settings */}
+      <div className="px-4 pb-3 flex gap-2">
+        <button
+          onClick={() => openDashboard()}
+          className="flex-1 py-2 px-3 rounded text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <span>📝</span>
+          <span>{t('popup.edit')}</span>
+        </button>
+        <button
+          onClick={() => openDashboard('settings')}
+          title={t('popup.settingsOpen')}
+          className="flex-1 py-2 px-3 rounded text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-200 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <span>⚙️</span>
+          <span>{t('nav.settings')}</span>
+        </button>
+      </div>
+
+      {/* First-time hint (shown only when the profile is fresh) */}
+      {isEmpty && (
+        <div className="mx-4 mb-3 px-3 py-2 bg-blue-950/40 border border-blue-900/60 rounded text-xs text-blue-300 leading-relaxed">
+          <span className="font-semibold">💡 </span>
+          {t('popup.hint.firstTime')}
+        </div>
+      )}
     </div>
     </I18nContext.Provider>
   );

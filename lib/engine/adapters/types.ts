@@ -5,9 +5,10 @@ export type InputType =
   | 'checkbox'
   | 'date'
   | 'textarea'
-  | 'custom-select';
+  | 'custom-select'
+  | 'contenteditable';
 
-export type FillSource = 'adapter' | 'heuristic' | 'ai';
+export type FillSource = 'adapter' | 'heuristic' | 'ai' | 'memory' | 'form';
 export type FillStatus = 'filled' | 'uncertain' | 'unrecognized';
 
 export interface FieldMapping {

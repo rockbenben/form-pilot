@@ -1,6 +1,6 @@
 export const en = {
   'app.name': 'FormPilot',
-  'app.subtitle': 'Resume Management · Auto-Fill · Smart Matching',
+  'app.subtitle': 'Profile · Auto-Fill · Smart Matching',
 
   'nav.basic': 'Basic Info',
   'nav.education': 'Education',
@@ -11,9 +11,12 @@ export const en = {
   'nav.custom': 'Custom Fields',
   'nav.settings': 'Settings',
 
-  'resume.new': '+ New Resume',
-  'resume.default': 'Resume',
+  'resume.new': '+ New Profile',
+  'resume.default': 'Profile',
+  'resume.delete': 'Delete',
   'resume.delete.confirm': 'Delete?',
+  'resume.rename': 'Rename',
+  'resume.hint': 'Click to switch · double-click to rename',
 
   'status.fields': 'Fields',
   'status.completion': 'Completion',
@@ -97,13 +100,13 @@ export const en = {
   'settings.apiKey': 'API Key',
   'settings.apiKeyHint': 'API Key is stored locally for AI-based field matching. Leave empty to use rule-based matching only.',
 
-  'import.title': 'Import Resume',
+  'import.title': 'Import Profile',
   'import.json': 'JSON File',
   'import.resume': 'PDF / Word',
   'import.click': 'Click to select file',
   'import.close': 'Close',
   'import.success.json': 'JSON imported successfully',
-  'import.success.resume': 'Resume imported. Please review and complete missing fields.',
+  'import.success.resume': 'Profile imported. Please review and complete missing fields.',
   'import.error.format': 'Only PDF and DOCX formats supported',
   'import.parsing': 'Parsing...',
 
@@ -112,12 +115,16 @@ export const en = {
 
   'tag.placeholder': 'Type and press Enter',
 
-  'popup.currentResume': 'Current Resume',
-  'popup.noResume': 'No resume created',
-  'popup.manage': 'Manage Resumes',
-  'popup.fill': 'Fill Current Page',
+  'popup.tagline': 'Form-filling helper',
+  'popup.currentResume': 'Current Profile',
+  'popup.noResume': 'No profile created',
+  'popup.edit': 'Edit Profile',
+  'popup.fill': 'Fill This Page',
   'popup.fill.success': 'Form filled successfully',
-  'popup.fill.error': 'Fill failed. Make sure the current page has a form.',
+  'popup.fill.error': 'Fill failed. If you just installed the extension or the tab was open before install, reload the page and retry.',
+  'popup.progress': '{filled} of {total} fields filled · {pct}%',
+  'popup.hint.firstTime': 'Fill in your profile first, then click "Fill This Page" on any form to auto-fill it',
+  'popup.settingsOpen': 'Open Settings',
 
   'status.saving': 'Saving...',
   'status.saved': 'Saved',
@@ -128,4 +135,56 @@ export const en = {
   'toolbar.filled': 'Filled',
   'toolbar.uncertain': 'Uncertain',
   'toolbar.unrecognized': 'Unrecognized',
+
+  // ── Capture feature ─────────────────────────────────────────────
+  'toolbar.save': 'Save',
+
+  'capture.menu.draft': '📝 Save Draft',
+  'capture.menu.writeback': '↩️ Save to Profile',
+  'capture.menu.memory': '🧠 Remember This Page',
+
+  'capture.toast.draft.saved': 'Saved draft with {n} fields',
+  'capture.toast.draft.partial': '{n} saved, {m} skipped',
+  'capture.toast.writeback.done': 'Saved {n} fields to "{name}"',
+  'capture.toast.memory.saved': 'Remembered {n} fields',
+  'capture.toast.nothingToWriteBack': 'No fields to save on this page',
+  'capture.toast.noActiveResume': 'Please select an active profile',
+  'capture.toast.storageFull': 'Storage full. Please clean up in Dashboard',
+
+  'capture.badge.detected': 'Draft with {n} fields detected ({time})',
+  'capture.badge.restore': 'Restore',
+  'capture.badge.restoreAndFill': 'Restore + Auto Fill',
+  'capture.badge.ignore': 'Ignore',
+  'capture.badge.delete': 'Delete',
+  'capture.badge.restored': 'Restored {filled}/{total}',
+
+  'time.justNow': 'just now',
+  'time.minutesAgo': '{n} min ago',
+  'time.hoursAgo': '{n} hr ago',
+  'time.daysAgo': '{n} days ago',
+
+  'nav.savedPages': 'Saved Pages',
+  'savedPages.drafts.title': 'Drafts',
+  'savedPages.drafts.empty': 'No drafts',
+  'savedPages.memory.title': 'Page Memory',
+  'savedPages.memory.empty': 'No saved memory',
+  'savedPages.form.title': 'Form Records',
+  'savedPages.form.empty': 'No cross-URL form records',
+  'savedPages.form.clearAll': 'Clear all',
+  'savedPages.form.column.label': 'Field',
+  'savedPages.form.column.value': 'Saved value',
+  'savedPages.form.column.hits': 'Hits',
+  'savedPages.form.column.source': 'Source URL',
+  'savedPages.column.url': 'URL',
+  'savedPages.column.savedAt': 'Saved At',
+  'savedPages.column.fields': 'Fields',
+  'savedPages.column.actions': 'Actions',
+  'savedPages.action.view': 'View',
+  'savedPages.action.delete': 'Delete',
+
+  'settings.capture.title': 'Capture',
+  'settings.capture.skipSensitive': 'Skip sensitive fields (ID, captcha, etc.)',
+  'settings.capture.allowedDomains': 'Auto-enable on these domains',
+  'settings.capture.allowedDomains.reset': 'Reset to defaults',
+  'settings.capture.allowedDomainsHint': 'One domain per line; commas also accepted (suffix match — mokahr.com covers jobs.mokahr.com). Pages not listed stay dormant; the toolbar still activates if the URL has a saved draft / memory, or if you click "Fill Current Page" from the popup.',
 };
