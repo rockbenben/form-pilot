@@ -6,6 +6,7 @@ import {
   clearAllFormEntries,
   deleteFormEntry,
 } from '@/lib/storage/form-store';
+import { WEAK_CANDIDATE_AGE_MS } from '@/lib/capture/constants';
 import type { CapturedField } from '@/lib/capture/types';
 
 const mk = (
@@ -153,5 +154,81 @@ describe('form-store · deleteFormEntry', () => {
   it('is a no-op for an unknown signature', async () => {
     await deleteFormEntry('ghost');
     expect(Object.keys(await listFormEntries())).toEqual([]);
+  });
+});
+
+describe('form-store · GC', () => {
+  beforeEach(async () => { await clearAllFormEntries(); });
+
+  it('does not GC the only remaining candidate no matter how weak', async () => {
+    // Seed a weak old candidate by rewriting storage directly.
+    await chrome.storage.local.set({
+      'formpilot:formEntries': {
+        sig1: {
+          signature: 'sig1',
+          kind: 'text',
+          label: 'x',
+          pinnedId: null,
+          candidates: [{
+            id: 'cand-1',
+            value: 'old',
+            hitCount: 0,
+            createdAt: 0,
+            updatedAt: 0,
+            lastUrl: '(seed)',
+          }],
+        },
+      },
+    });
+    // Trigger GC by saving an unrelated signature.
+    await saveFormEntries([mk('other', 'v', 'text')], 'https://a.com/');
+    const entry = await getFormEntry('sig1');
+    // Untouched signatures are NOT GC'd. (GC is scoped to touched signatures.)
+    expect(entry!.candidates).toHaveLength(1);
+  });
+
+  it('GCs weak and stale non-pinned candidates when their signature is touched', async () => {
+    const staleTime = Date.now() - WEAK_CANDIDATE_AGE_MS - 1000;
+    await chrome.storage.local.set({
+      'formpilot:formEntries': {
+        email: {
+          signature: 'email',
+          kind: 'text',
+          label: 'Email',
+          pinnedId: null,
+          candidates: [
+            { id: 'strong', value: 'a@x.com', hitCount: 5, createdAt: staleTime, updatedAt: staleTime, lastUrl: '' },
+            { id: 'weak-old', value: 'b@y.com', hitCount: 1, createdAt: staleTime, updatedAt: staleTime, lastUrl: '' },
+          ],
+        },
+      },
+    });
+    // Touch 'email' with a third distinct value so GC runs for this signature.
+    await saveFormEntries([mk('email', 'c@z.com', 'text')], 'https://a.com/');
+    const entry = await getFormEntry('email');
+    const ids = entry!.candidates.map((c) => c.id).sort();
+    expect(ids).not.toContain('weak-old');
+    expect(ids).toContain('strong');
+  });
+
+  it('spares pinned candidates from GC even if weak and stale', async () => {
+    const staleTime = Date.now() - WEAK_CANDIDATE_AGE_MS - 1000;
+    await chrome.storage.local.set({
+      'formpilot:formEntries': {
+        email: {
+          signature: 'email',
+          kind: 'text',
+          label: 'Email',
+          pinnedId: 'pinned-weak',
+          candidates: [
+            { id: 'pinned-weak', value: 'a@x.com', hitCount: 1, createdAt: staleTime, updatedAt: staleTime, lastUrl: '' },
+            { id: 'strong', value: 'b@y.com', hitCount: 5, createdAt: staleTime, updatedAt: staleTime, lastUrl: '' },
+          ],
+        },
+      },
+    });
+    await saveFormEntries([mk('email', 'c@z.com', 'text')], 'https://a.com/');
+    const entry = await getFormEntry('email');
+    expect(entry!.candidates.some((c) => c.id === 'pinned-weak')).toBe(true);
   });
 });
