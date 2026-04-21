@@ -13,6 +13,7 @@ import { scanFields } from '@/lib/engine/scanner';
 import { collectWriteBack } from '@/lib/capture/writeback';
 import { normalizeUrlForDraft, normalizeUrlForMemory } from '@/lib/capture/url-key';
 import { matchesAllowedDomain, safeHostname } from '@/lib/capture/domain-match';
+import { normalizeDomain, type FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
 import { makeT } from '@/lib/i18n';
 
 export default defineContentScript({
@@ -70,6 +71,8 @@ export default defineContentScript({
       resume: Resume | null;
       memory: PageMemoryEntry[];
       formEntries: Record<string, FormEntry>;
+      domainPrefs: FieldDomainPrefs;
+      currentDomain: string;
     }
 
     /**
@@ -78,10 +81,12 @@ export default defineContentScript({
      * form-entries map in parallel.
      */
     async function fetchFillContext(): Promise<FillContext> {
+      const currentDomain = normalizeDomain(window.location.hostname);
       try {
         const res = await chrome.runtime.sendMessage({
           type: 'GET_FILL_CONTEXT',
           memoryUrl: normalizeUrlForMemory(window.location.href),
+          pageDomain: currentDomain,
         });
         if (res?.ok) {
           const data = res.data as FillContext;
@@ -90,22 +95,48 @@ export default defineContentScript({
             resume: data.resume,
             memory: data.memory ?? [],
             formEntries: data.formEntries ?? {},
+            domainPrefs: data.domainPrefs ?? {},
+            currentDomain: data.currentDomain || currentDomain,
           };
         }
       } catch { /* ignore */ }
-      return { resume: null, memory: [], formEntries: {} };
+      return {
+        resume: null,
+        memory: [],
+        formEntries: {},
+        domainPrefs: {},
+        currentDomain,
+      };
     }
 
     // ── Fill handler ────────────────────────────────────────────────────────
     async function handleFill(): Promise<FillResult> {
       const empty: FillResult = { items: [], filled: 0, uncertain: 0, unrecognized: 0 };
       try {
-        const { resume, memory, formEntries } = await fetchFillContext();
+        const { resume, memory, formEntries, domainPrefs, currentDomain } = await fetchFillContext();
         const adapter = findAdapter(window.location.href);
         // A missing resume is fine — memory + form entries still let us fill.
         const effectiveResume = resume ?? createEmptyResume('_', '_');
-        const result = await orchestrateFill(document, effectiveResume, adapter, memory, formEntries);
+        const result = await orchestrateFill(
+          document,
+          effectiveResume,
+          adapter,
+          memory,
+          formEntries,
+          domainPrefs,
+          currentDomain,
+        );
         applyFieldHighlights(result);
+        // Fire-and-forget BUMP_FORM_HIT for every Phase 4 fill.
+        const hits = result.formHits ?? [];
+        for (const hit of hits) {
+          chrome.runtime.sendMessage({
+            type: 'BUMP_FORM_HIT',
+            signature: hit.signature,
+            candidateId: hit.candidateId,
+            sourceUrl: window.location.href,
+          });
+        }
         return result;
       } catch {
         // Any unexpected throw from the cascade engine, adapter, or messaging
