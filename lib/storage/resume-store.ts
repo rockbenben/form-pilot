@@ -65,6 +65,10 @@ export async function updateResume(
 export async function deleteResume(id: string): Promise<void> {
   const all = await readAll();
   await writeAll(all.filter((r) => r.meta.id !== id));
+  // Cascade: clean this resume's slice from profileDomainPrefs so it doesn't
+  // accumulate stale entries over time.
+  const { clearProfileDomainPrefsForResume } = await import('./profile-domain-prefs-store');
+  await clearProfileDomainPrefsForResume(id);
 }
 
 /**

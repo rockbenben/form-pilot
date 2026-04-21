@@ -3,6 +3,10 @@ import {
   createResume, getResume, listResumes, updateResume, deleteResume, renameResume,
   getActiveResumeId, setActiveResumeId, importResume,
 } from '@/lib/storage/resume-store';
+import {
+  setProfileDomainPref,
+  listForResume,
+} from '@/lib/storage/profile-domain-prefs-store';
 
 describe('resume-store', () => {
   it('creates a new resume with generated id and timestamps', async () => {
@@ -121,5 +125,18 @@ describe('resume-store · importResume legacy schema', () => {
     expect(resume.basic.email).toHaveLength(1);
     expect(resume.basic.email[0].id).toBe('c1');
     expect(resume.basic.emailPinnedId).toBe('c1');
+  });
+});
+
+describe('resume-store · deleteResume cascades profile domain prefs', () => {
+  it('removes the deleted resume\'s slice from profileDomainPrefs', async () => {
+    await chrome.storage.local.clear();
+    const r1 = await createResume('one');
+    const r2 = await createResume('two');
+    await setProfileDomainPref(r1.meta.id, 'basic.phone', 'workday.com', 'c1');
+    await setProfileDomainPref(r2.meta.id, 'basic.phone', 'workday.com', 'c2');
+    await deleteResume(r1.meta.id);
+    expect(await listForResume(r1.meta.id)).toEqual({});
+    expect((await listForResume(r2.meta.id))['basic.phone']['workday.com']).toBe('c2');
   });
 });
