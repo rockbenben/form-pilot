@@ -1,54 +1,79 @@
 import type { CapturedField, CapturedFieldKind } from '@/lib/capture/types';
+import {
+  WEAK_CANDIDATE_AGE_MS,
+  WEAK_CANDIDATE_HIT_THRESHOLD,
+} from '@/lib/capture/constants';
 
 const KEY = 'formpilot:formEntries';
 
-/**
- * A cross-URL form-field entry learned from the user's past interactions.
- * Keyed by the field's signature (hash of label|placeholder|aria-label),
- * so the same field on different sites shares a single remembered value.
- *
- * Orthogonal to `formpilot:pageMemory` (per-URL, exact) — this store is
- * coarser and is consulted after page memory as a last-resort Phase 4 fill.
- */
+/** One saved alternate for a signature. */
+export interface FieldCandidate {
+  id: string;
+  value: string;
+  displayValue?: string;
+  hitCount: number;
+  createdAt: number;
+  updatedAt: number;
+  lastUrl: string;
+}
+
+/** Cross-URL record for one signature. */
 export interface FormEntry {
   signature: string;
   kind: CapturedFieldKind;
-  /** Internal value — same as CapturedField.value. */
-  value: string;
-  /** User-visible option text (radio/select). See CapturedField.displayValue. */
-  displayValue?: string;
-  /** Last-seen human label — for Dashboard display, not matching. */
   label: string;
-  /** Last URL that contributed this entry. */
-  lastUrl: string;
-  updatedAt: number;
-  /** How many times this signature has been saved. Higher = more trusted. */
-  hitCount: number;
+  candidates: FieldCandidate[];
+  pinnedId: string | null;
 }
 
-async function readAll(): Promise<Record<string, FormEntry>> {
+export type FormEntriesMap = Record<string, FormEntry>;
+
+async function readAll(): Promise<FormEntriesMap> {
   const res = await chrome.storage.local.get(KEY);
-  return (res[KEY] as Record<string, FormEntry> | undefined) ?? {};
+  return (res[KEY] as FormEntriesMap | undefined) ?? {};
 }
 
-async function writeAll(all: Record<string, FormEntry>): Promise<void> {
+async function writeAll(all: FormEntriesMap): Promise<void> {
   await chrome.storage.local.set({ [KEY]: all });
 }
 
+function sameOption(c: FieldCandidate, value: string, displayValue?: string): boolean {
+  return c.value === value && (c.displayValue ?? '') === (displayValue ?? '');
+}
+
+function newCandidate(
+  value: string,
+  displayValue: string | undefined,
+  lastUrl: string,
+  now: number,
+  hitCount: number,
+): FieldCandidate {
+  return {
+    id: crypto.randomUUID(),
+    value,
+    displayValue,
+    hitCount,
+    createdAt: now,
+    updatedAt: now,
+    lastUrl,
+  };
+}
+
 /**
- * Upsert form entries from a captured snapshot. Silently skips fields where
- * both value and displayValue would be empty (uncommitted form state).
+ * Upsert form entries from a captured snapshot.
  *
- * A single page may expose multiple fields with the same signature (e.g.
- * three "Email" inputs). They are logically one remembered entry — dedupe
- * by signature before writing so hitCount advances once per save, not
- * once per physical field. Last occurrence in the array wins its value.
+ *  - Dedupes by signature within a single save (one save = one hit).
+ *  - Matching (value, displayValue) bumps an existing candidate.
+ *  - Differing value appends a new candidate.
+ *  - Checkbox signatures are special: always single-candidate;
+ *    flipping the stored value resets hitCount.
  */
 export async function saveFormEntries(
   fields: CapturedField[],
   sourceUrl: string,
 ): Promise<number> {
   if (fields.length === 0) return 0;
+
   const bySignature = new Map<string, CapturedField>();
   for (const f of fields) {
     if (!f.signature) continue;
@@ -59,32 +84,92 @@ export async function saveFormEntries(
 
   const all = await readAll();
   const now = Date.now();
+  const touched: string[] = [];
   let saved = 0;
+
   for (const [sig, f] of bySignature) {
-    const prior = all[sig];
-    all[sig] = {
-      signature: sig,
-      kind: f.kind,
-      value: f.value,
-      displayValue: f.displayValue,
-      label: f.label,
-      lastUrl: sourceUrl,
-      updatedAt: now,
-      hitCount: (prior?.hitCount ?? 0) + 1,
-    };
+    const entry = all[sig];
+    if (!entry) {
+      all[sig] = {
+        signature: sig,
+        kind: f.kind,
+        label: f.label,
+        candidates: [newCandidate(f.value, f.displayValue, sourceUrl, now, 1)],
+        pinnedId: null,
+      };
+    } else {
+      entry.label = f.label;
+      if (f.kind === 'checkbox') {
+        const only = entry.candidates[0];
+        if (only && sameOption(only, f.value, f.displayValue)) {
+          only.hitCount++;
+          only.updatedAt = now;
+          only.lastUrl = sourceUrl;
+        } else {
+          entry.candidates = [newCandidate(f.value, f.displayValue, sourceUrl, now, 1)];
+          entry.pinnedId = null;
+        }
+      } else {
+        const match = entry.candidates.find((c) => sameOption(c, f.value, f.displayValue));
+        if (match) {
+          match.hitCount++;
+          match.updatedAt = now;
+          match.lastUrl = sourceUrl;
+        } else {
+          entry.candidates.push(newCandidate(f.value, f.displayValue, sourceUrl, now, 1));
+        }
+      }
+    }
+    touched.push(sig);
     saved++;
   }
+
+  for (const sig of touched) {
+    const entry = all[sig];
+    gcEntry(entry, now);
+    if (entry && entry.candidates.length === 0) delete all[sig];
+  }
+
   await writeAll(all);
   return saved;
+}
+
+/**
+ * In-place GC of weak-and-old candidates. Guarantees:
+ *  - Never deletes the only remaining candidate.
+ *  - Never deletes the pinned candidate.
+ *  - `pinnedId` is cleared if it no longer points to a candidate.
+ */
+function gcEntry(entry: FormEntry | undefined, now: number): void {
+  if (!entry || entry.candidates.length <= 1) return;
+
+  const survivors: FieldCandidate[] = [];
+  for (const c of entry.candidates) {
+    const weak = c.hitCount < WEAK_CANDIDATE_HIT_THRESHOLD;
+    const stale = now - c.updatedAt > WEAK_CANDIDATE_AGE_MS;
+    const pinned = c.id === entry.pinnedId;
+    if (weak && stale && !pinned) continue;
+    survivors.push(c);
+  }
+  if (survivors.length === 0) {
+    // Keep the freshest one as a safety floor.
+    const newest = [...entry.candidates].sort((a, b) => b.updatedAt - a.updatedAt)[0];
+    entry.candidates = [newest];
+  } else {
+    entry.candidates = survivors;
+  }
+  if (entry.pinnedId && !entry.candidates.some((c) => c.id === entry.pinnedId)) {
+    entry.pinnedId = null;
+  }
+}
+
+export async function listFormEntries(): Promise<FormEntriesMap> {
+  return readAll();
 }
 
 export async function getFormEntry(signature: string): Promise<FormEntry | null> {
   const all = await readAll();
   return all[signature] ?? null;
-}
-
-export async function listFormEntries(): Promise<Record<string, FormEntry>> {
-  return readAll();
 }
 
 export async function deleteFormEntry(signature: string): Promise<void> {
