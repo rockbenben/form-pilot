@@ -15,6 +15,9 @@ import { normalizeUrlForDraft, normalizeUrlForMemory } from '@/lib/capture/url-k
 import { matchesAllowedDomain, safeHostname } from '@/lib/capture/domain-match';
 import { normalizeDomain, type FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
 import { makeT } from '@/lib/i18n';
+import { computeSignatureFor } from '@/lib/capture/signature';
+import { fillElement } from '@/lib/engine/heuristic/fillers';
+import { mountCandidatePicker } from '@/components/capture/mount-candidate-picker';
 
 export default defineContentScript({
   // Injection is scoped by the in-script form-element gate below (> 3 inputs);
@@ -112,6 +115,9 @@ export default defineContentScript({
     // ── Fill handler ────────────────────────────────────────────────────────
     async function handleFill(): Promise<FillResult> {
       const empty: FillResult = { items: [], filled: 0, uncertain: 0, unrecognized: 0 };
+      // Unmount any pickers from a previous fill before starting a new one.
+      for (const p of mountedPickers) { try { p.unmount(); } catch { /* ignore */ } }
+      mountedPickers = [];
       try {
         const { resume, memory, formEntries, domainPrefs, currentDomain } = await fetchFillContext();
         const adapter = findAdapter(window.location.href);
@@ -137,6 +143,73 @@ export default defineContentScript({
             sourceUrl: window.location.href,
           });
         }
+
+        // Mount a ▾ picker beside every multi-candidate Phase 4 field.
+        const storedLocale = await chrome.storage.local.get('formpilot:locale');
+        const pickerLocale = (storedLocale['formpilot:locale'] === 'en') ? 'en' : 'zh';
+        const pickerT = makeT(pickerLocale);
+
+        for (const it of result.items) {
+          if (it.source !== 'form') continue;
+          if (!it.element) continue;
+          const sig = computeSignatureFor(it.element);
+          const entry = formEntries[sig];
+          if (!entry) continue;
+          if (entry.kind === 'checkbox') continue;
+          if (entry.candidates.length < 2) continue;
+
+          const currentCandidateId = hits.find((h) => h.signature === sig)?.candidateId ?? null;
+
+          const picker = mountCandidatePicker({
+            target: it.element,
+            signature: sig,
+            t: pickerT,
+            candidates: entry.candidates,
+            pinnedId: entry.pinnedId,
+            currentCandidateId,
+            onSelect: async (cid) => {
+              const picked = entry.candidates.find((c) => c.id === cid);
+              if (!picked) return;
+              const val = picked.displayValue && picked.displayValue.length > 0 ? picked.displayValue : picked.value;
+              try {
+                await fillElement(it.element as Element, val, entry.kind);
+              } catch { /* ignore */ }
+              chrome.runtime.sendMessage({
+                type: 'BUMP_FORM_HIT',
+                signature: sig,
+                candidateId: cid,
+                sourceUrl: window.location.href,
+              });
+              // First switch in this session for (sig, domain) → ask whether to remember.
+              const promptKey = `${sig}:${currentDomain}`;
+              if (!promptedDomainPrefs.has(promptKey)) {
+                promptedDomainPrefs.add(promptKey);
+                const msg = pickerT('candidate.domainPref.rememberToast', { domain: currentDomain, value: val });
+                if (window.confirm(msg)) {
+                  chrome.runtime.sendMessage({
+                    type: 'SET_DOMAIN_PREF',
+                    signature: sig,
+                    domain: currentDomain,
+                    candidateId: cid,
+                  });
+                }
+              }
+            },
+            onPinToggle: async (cid) => {
+              const next = entry.pinnedId === cid ? null : cid;
+              chrome.runtime.sendMessage({ type: 'SET_FORM_PIN', signature: sig, candidateId: next });
+            },
+            onDelete: async (cid) => {
+              chrome.runtime.sendMessage({ type: 'DELETE_FORM_CANDIDATE', signature: sig, candidateId: cid });
+            },
+            onManageAll: () => {
+              const url = chrome.runtime.getURL('/dashboard.html') + '#savedPages';
+              window.open(url, '_blank');
+            },
+          });
+          mountedPickers.push(picker);
+        }
+
         return result;
       } catch {
         // Any unexpected throw from the cascade engine, adapter, or messaging
@@ -246,6 +319,8 @@ export default defineContentScript({
     let badge: { unmount: () => void } | null = null;
     let badgeUrl: string | null = null;
     let cleanupObservers: (() => void) | null = null;
+    let mountedPickers: Array<{ unmount: () => void }> = [];
+    let promptedDomainPrefs: Set<string> = new Set();
 
     const storageListener = (
       changes: Record<string, chrome.storage.StorageChange>,
@@ -364,6 +439,8 @@ export default defineContentScript({
       cleanupObservers?.();
       toolbar?.unmount();
       badge?.unmount();
+      for (const p of mountedPickers) { try { p.unmount(); } catch { /* ignore */ } }
+      mountedPickers = [];
       chrome.storage.onChanged.removeListener(storageListener);
       chrome.runtime.onMessage.removeListener(messageListener);
     });
