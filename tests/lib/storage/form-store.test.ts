@@ -6,6 +6,7 @@ import {
   clearAllFormEntries,
   deleteFormEntry,
 } from '@/lib/storage/form-store';
+import { setFormPin, deleteCandidate } from '@/lib/storage/form-store';
 import { WEAK_CANDIDATE_AGE_MS } from '@/lib/capture/constants';
 import type { CapturedField } from '@/lib/capture/types';
 
@@ -230,5 +231,58 @@ describe('form-store · GC', () => {
     await saveFormEntries([mk('email', 'c@z.com', 'text')], 'https://a.com/');
     const entry = await getFormEntry('email');
     expect(entry!.candidates.some((c) => c.id === 'pinned-weak')).toBe(true);
+  });
+});
+
+describe('form-store · pin', () => {
+  beforeEach(async () => { await clearAllFormEntries(); });
+
+  it('setFormPin sets and clears pinnedId', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    await saveFormEntries([mk('email', 'b@y.com', 'text')], 'https://b.com/');
+    const entry = await getFormEntry('email');
+    const target = entry!.candidates.find((c) => c.value === 'b@y.com')!;
+    await setFormPin('email', target.id);
+    expect((await getFormEntry('email'))!.pinnedId).toBe(target.id);
+    await setFormPin('email', null);
+    expect((await getFormEntry('email'))!.pinnedId).toBeNull();
+  });
+
+  it('setFormPin is a no-op for unknown candidateId', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    await setFormPin('email', 'nope');
+    expect((await getFormEntry('email'))!.pinnedId).toBeNull();
+  });
+});
+
+describe('form-store · deleteCandidate', () => {
+  beforeEach(async () => { await clearAllFormEntries(); });
+
+  it('removes a candidate', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    await saveFormEntries([mk('email', 'b@y.com', 'text')], 'https://b.com/');
+    const entry = await getFormEntry('email');
+    const target = entry!.candidates.find((c) => c.value === 'b@y.com')!;
+    await deleteCandidate('email', target.id);
+    const after = await getFormEntry('email');
+    expect(after!.candidates).toHaveLength(1);
+    expect(after!.candidates[0].value).toBe('a@x.com');
+  });
+
+  it('clears pinnedId when the pinned candidate is deleted', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    await saveFormEntries([mk('email', 'b@y.com', 'text')], 'https://b.com/');
+    const entry = await getFormEntry('email');
+    const target = entry!.candidates.find((c) => c.value === 'b@y.com')!;
+    await setFormPin('email', target.id);
+    await deleteCandidate('email', target.id);
+    expect((await getFormEntry('email'))!.pinnedId).toBeNull();
+  });
+
+  it('deletes the entire entry when the last candidate is removed', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    const entry = await getFormEntry('email');
+    await deleteCandidate('email', entry!.candidates[0].id);
+    expect(await getFormEntry('email')).toBeNull();
   });
 });

@@ -182,3 +182,31 @@ export async function deleteFormEntry(signature: string): Promise<void> {
 export async function clearAllFormEntries(): Promise<void> {
   await chrome.storage.local.set({ [KEY]: {} });
 }
+
+export async function setFormPin(
+  signature: string,
+  candidateId: string | null,
+): Promise<void> {
+  const all = await readAll();
+  const entry = all[signature];
+  if (!entry) return;
+  if (candidateId !== null && !entry.candidates.some((c) => c.id === candidateId)) return;
+  entry.pinnedId = candidateId;
+  await writeAll(all);
+}
+
+export async function deleteCandidate(
+  signature: string,
+  candidateId: string,
+): Promise<void> {
+  const all = await readAll();
+  const entry = all[signature];
+  if (!entry) return;
+  entry.candidates = entry.candidates.filter((c) => c.id !== candidateId);
+  if (entry.candidates.length === 0) {
+    delete all[signature];
+  } else if (entry.pinnedId === candidateId) {
+    entry.pinnedId = null;
+  }
+  await writeAll(all);
+}
