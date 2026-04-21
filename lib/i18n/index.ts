@@ -23,11 +23,33 @@ export function useI18n() {
   return useContext(I18nContext);
 }
 
+/**
+ * Pick a default locale when the user has no stored preference.
+ * Uses Chrome's UI language (what the user picked in browser settings).
+ * Anything starting with `zh` → 'zh'; everything else → 'en'.
+ *
+ * Gracefully falls back to 'en' if chrome.i18n is unavailable (e.g. tests).
+ */
+export function detectDefaultLocale(): Locale {
+  try {
+    const ui = chrome?.i18n?.getUILanguage?.() ?? '';
+    return ui.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+/** Resolve locale from storage, falling back to browser detection. */
+export function resolveLocale(stored: unknown): Locale {
+  if (stored === 'zh' || stored === 'en') return stored;
+  return detectDefaultLocale();
+}
+
 export function useI18nProvider(): I18nContextType {
-  const [locale, setLocaleState] = useState<Locale>('zh');
+  const [locale, setLocaleState] = useState<Locale>(() => detectDefaultLocale());
 
   useEffect(() => {
-    // Load saved locale from storage
+    // Override detected default with user's stored preference, if any.
     chrome.storage.local.get('formpilot:locale').then((result) => {
       const saved = result['formpilot:locale'] as Locale;
       if (saved && (saved === 'zh' || saved === 'en')) {

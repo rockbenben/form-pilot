@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import DraftBadge from './DraftBadge';
 import type { DraftSnapshot } from '@/lib/capture/types';
-import { makeT } from '@/lib/i18n';
+import { makeT, resolveLocale } from '@/lib/i18n';
 
 export interface DraftBadgeMountOptions {
   ctx: InstanceType<typeof ContentScriptContext>;
@@ -15,7 +15,7 @@ export interface DraftBadgeMountOptions {
 
 export async function mountDraftBadge(opts: DraftBadgeMountOptions): Promise<{ unmount: () => void }> {
   const stored = await chrome.storage.local.get('formpilot:locale');
-  const locale = (stored['formpilot:locale'] === 'en') ? 'en' : 'zh';
+  const locale = resolveLocale(stored['formpilot:locale']);
   const t = makeT(locale);
 
   const ui = await createShadowRootUi(opts.ctx, {

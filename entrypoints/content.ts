@@ -14,7 +14,7 @@ import { collectWriteBack } from '@/lib/capture/writeback';
 import { normalizeUrlForDraft, normalizeUrlForMemory } from '@/lib/capture/url-key';
 import { matchesAllowedDomain, safeHostname } from '@/lib/capture/domain-match';
 import { normalizeDomain, type FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
-import { makeT } from '@/lib/i18n';
+import { makeT, resolveLocale } from '@/lib/i18n';
 import { computeSignatureFor } from '@/lib/capture/signature';
 import { fillElement } from '@/lib/engine/heuristic/fillers';
 import { detectElementKind } from '@/lib/capture/element-value';
@@ -50,7 +50,7 @@ export default defineContentScript({
     } catch { /* use defaults */ }
 
     const stored = await chrome.storage.local.get('formpilot:locale');
-    const locale = (stored['formpilot:locale'] === 'en') ? 'en' : 'zh';
+    const locale = resolveLocale(stored['formpilot:locale']);
     const t = makeT(locale);
 
     const DEFAULT_POSITION = { x: 16, y: 80 };

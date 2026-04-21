@@ -5,7 +5,7 @@ import ResultBubble from './ResultBubble';
 import SaveMenu from '@/components/capture/SaveMenu';
 import ToolbarToast from '@/components/capture/ToolbarToast';
 import type { FillResult } from '@/lib/engine/adapters/types';
-import { makeT } from '@/lib/i18n';
+import { makeT, resolveLocale } from '@/lib/i18n';
 
 interface ToolbarAppProps {
   /** Initial position: left offset from viewport left, bottom offset from viewport bottom */
@@ -131,9 +131,9 @@ export interface ToolbarMountOptions {
  * Style isolation ensures the toolbar looks correct on any host page.
  */
 export async function mountToolbar(options: ToolbarMountOptions): Promise<{ unmount: () => void }> {
-  // Load locale from storage before mounting so the toolbar is i18n-aware
+  // Load locale from storage; fall back to browser UI language.
   const stored = await chrome.storage.local.get('formpilot:locale');
-  const locale = (stored['formpilot:locale'] === 'en') ? 'en' : 'zh';
+  const locale = resolveLocale(stored['formpilot:locale']);
   const t = makeT(locale);
 
   const ui = await createShadowRootUi(options.ctx, {
