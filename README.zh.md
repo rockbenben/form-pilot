@@ -104,7 +104,7 @@ pnpm run build        # 生产构建
 | **保存草稿 + 恢复**（按 URL 快照 + 右上角恢复徽章） | ✅ |
 | **保存到资料**（页面值 → 活动资料，一键全量） | ✅ |
 | **本页记忆**（Phase 3 兜底，紫色高亮） | ✅ |
-| **跨站表单记录**（Phase 4，签名匹配，粉色高亮） | ✅ |
+| **多值表单记录**（Phase 4；同一字段的历史答案全部保留；可 pin / 按域名覆盖；页面内 ▾ 选择器） | Done |
 | **隐藏 input 代理点击**（jqradio / iCheck / display:none） | ✅ |
 | **题组 label 识别**（问卷星、Select2、fieldset/legend） | ✅ |
 | **域名白名单**（Settings 管理的自动激活范围） | ✅ |
@@ -163,7 +163,8 @@ pnpm run build        # 生产构建
 │                            allowedDomains、locale 等     │
 │  formpilot:drafts          按 URL 草稿（30 天 TTL）      │
 │  formpilot:pageMemory      按 URL × (签名, index)        │
-│  formpilot:formEntries     按字段签名的跨站记录          │
+│  formpilot:formEntries     跨 URL 候选列表 per signature │
+│  formpilot:fieldDomainPrefs 按 signature 的 domain 覆盖  │
 │  chrome.storage.session    仅 API Key                    │
 └──────────────────────────────────────────────────────────┘
 
@@ -185,7 +186,7 @@ pnpm run build        # 生产构建
 **「记住本页表单」一键双写两层：**
 
 - **页面记忆** — `(归一化 URL) × (字段签名, DOM 顺序 index)`。精确同 URL 匹配。下次访问**同 URL** 时作为 **Phase 3** 自动填入，永不过期。
-- **表单记录** — 只用字段签名，不绑 URL。作为 **Phase 4** 在**任何**有相同签名字段的页面自动填入。radio / select 存 `displayValue`（选项可见文本 "男" / "汉族"），哪怕目标站的内部 value 不同（"1" vs "male"）也能通过 label 文本命中。
+- **Form entries（跨 URL 候选）** —— 每个 signature 保留一份候选列表（历史答案全部保留，不会互相覆盖）。Phase 4 填充按：域名覆盖 → 全局 pin（★）→ hitCount 最高 挑选。多候选字段在页面上会出现 ▾ 选择器供用户临时切换；首次在某个新域名切换时，会弹 toast 问是否"在该域名下记住"。Radio/select 存 `displayValue`（可见选项文字），另一个站点用不同内部 value 时仍可匹配。
 
 敏感字段（身份证、验证码、密码、银行卡）默认跳过，**设置 → 保存/恢复** 里可开关。草稿恢复的字段会被打标，后续 Phase 1-4 都不会再覆盖它。
 

@@ -104,7 +104,7 @@ pnpm run build        # Production build
 | **Draft save + restore** (per-URL snapshot with top-right recovery badge) | Done |
 | **Save to profile** (page values → active profile, one click) | Done |
 | **Per-URL page memory** (Phase 3 fallback, purple highlight) | Done |
-| **Cross-URL form entries** (Phase 4 — signature-keyed, pink highlight) | Done |
+| **Multi-value form entries** (Phase 4; keep every past answer per signature; pin / per-domain override; in-page ▾ picker) | Done |
 | **Widget proxy click-through** (jqradio / iCheck / display:none inputs) | Done |
 | **Group-heading label detection** (wjx, Select2, fieldset/legend) | Done |
 | **Opt-in domain list** (Settings-managed auto-activation) | Done |
@@ -163,7 +163,8 @@ pnpm run build        # Production build
 │                            allowedDomains, locale       │
 │  formpilot:drafts          Per-URL snapshots (30d TTL)  │
 │  formpilot:pageMemory      Per-URL (signature, index)   │
-│  formpilot:formEntries     Cross-URL signature→value    │
+│  formpilot:formEntries     Cross-URL: candidates[] per s│
+│  formpilot:fieldDomainPrefs Per-sig domain overrides    │
 │  chrome.storage.session    API key only                 │
 └─────────────────────────────────────────────────────────┘
 
@@ -185,7 +186,7 @@ pnpm run build        # Production build
 **Remember-This-Page fans out to two layers in a single click:**
 
 - **Page memory** — `(normalized URL) × (field signature, DOM-order index)`. Exact per-URL match. Fills as **Phase 3** on next visit to the same URL. No expiry.
-- **Form entries** — field signature only, no URL binding. Fills as **Phase 4** on **any** page with the same question signature. Radio/select store `displayValue` (option text "男" / "汉族") so the answer still matches when another site uses different internal values.
+- **Form entries** — per-signature list of candidates (every distinct past answer kept, not overwritten). Phase 4 fill picks via: domain override → global pin (★) → highest hitCount. Multi-candidate fields get an in-page ▾ picker so users can switch per field; picking on a new domain triggers a toast asking whether to remember the choice there. Radio/select store `displayValue` (option text) so the answer still matches when another site uses different internal values.
 
 Sensitive fields (ID numbers, captchas, passwords, bank cards) are skipped by default. Toggle in **Settings → Capture**. Draft-restored fields get flagged so subsequent Phase 1-4 fills leave them alone.
 
