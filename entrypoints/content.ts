@@ -17,7 +17,7 @@ import { normalizeDomain, type FieldDomainPrefs } from '@/lib/storage/domain-pre
 import { makeT } from '@/lib/i18n';
 import { computeSignatureFor } from '@/lib/capture/signature';
 import { fillElement } from '@/lib/engine/heuristic/fillers';
-import { mountCandidatePicker } from '@/components/capture/mount-candidate-picker';
+import { mountCandidatePicker, type MountedCandidatePicker } from '@/components/capture/mount-candidate-picker';
 
 export default defineContentScript({
   // Injection is scoped by the in-script form-element gate below (> 3 inputs);
@@ -156,7 +156,8 @@ export default defineContentScript({
 
           const currentCandidateId = hits.find((h) => h.signature === sig)?.candidateId ?? null;
 
-          const picker = mountCandidatePicker({
+          let picker: MountedCandidatePicker;
+          picker = mountCandidatePicker({
             target: it.element,
             signature: sig,
             t,
@@ -180,7 +181,7 @@ export default defineContentScript({
               const promptKey = `${sig}:${currentDomain}`;
               if (!promptedDomainPrefs.has(promptKey)) {
                 promptedDomainPrefs.add(promptKey);
-                const msg = pickerT('candidate.domainPref.rememberToast', { domain: currentDomain, value: val });
+                const msg = t('candidate.domainPref.rememberToast', { domain: currentDomain, value: val });
                 if (window.confirm(msg)) {
                   chrome.runtime.sendMessage({
                     type: 'SET_DOMAIN_PREF',
@@ -193,10 +194,20 @@ export default defineContentScript({
             },
             onPinToggle: async (cid) => {
               const next = entry.pinnedId === cid ? null : cid;
-              chrome.runtime.sendMessage({ type: 'SET_FORM_PIN', signature: sig, candidateId: next });
+              await chrome.runtime.sendMessage({ type: 'SET_FORM_PIN', signature: sig, candidateId: next });
+              entry.pinnedId = next;
+              picker.update({ pinnedId: next });
             },
             onDelete: async (cid) => {
-              chrome.runtime.sendMessage({ type: 'DELETE_FORM_CANDIDATE', signature: sig, candidateId: cid });
+              await chrome.runtime.sendMessage({ type: 'DELETE_FORM_CANDIDATE', signature: sig, candidateId: cid });
+              entry.candidates = entry.candidates.filter((c) => c.id !== cid);
+              picker.update({ candidates: entry.candidates, pinnedId: entry.pinnedId });
+              // If this entry now has < 2 candidates, unmount the picker entirely.
+              if (entry.candidates.length < 2) {
+                const idx = mountedPickers.indexOf(picker);
+                if (idx >= 0) mountedPickers.splice(idx, 1);
+                picker.unmount();
+              }
             },
             onManageAll: () => {
               const url = chrome.runtime.getURL('/dashboard.html') + '#savedPages';
@@ -315,7 +326,7 @@ export default defineContentScript({
     let badge: { unmount: () => void } | null = null;
     let badgeUrl: string | null = null;
     let cleanupObservers: (() => void) | null = null;
-    let mountedPickers: Array<{ unmount: () => void }> = [];
+    let mountedPickers: MountedCandidatePicker[] = [];
     let promptedDomainPrefs: Set<string> = new Set();
 
     const storageListener = (

@@ -327,6 +327,19 @@ describe('form-store · manual add / update', () => {
     expect(after!.candidates[0].id).toBe(oldId);
     expect(after!.candidates[0].value).toBe('b@y.com');
   });
+
+  it('updateCandidate rejects an edit that duplicates another candidate', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    await saveFormEntries([mk('email', 'b@y.com', 'text')], 'https://b.com/');
+    const entry = await getFormEntry('email');
+    const bCand = entry!.candidates.find((c) => c.value === 'b@y.com')!;
+    // Try to rename 'b@y.com' to 'a@x.com' — should be rejected (no-op).
+    await updateCandidate('email', bCand.id, 'a@x.com', undefined);
+    const after = await getFormEntry('email');
+    // The b candidate still has b's value (unchanged).
+    expect(after!.candidates.find((c) => c.id === bCand.id)!.value).toBe('b@y.com');
+    expect(after!.candidates).toHaveLength(2);
+  });
 });
 
 describe('form-store · cascade cleanup on candidate delete', () => {

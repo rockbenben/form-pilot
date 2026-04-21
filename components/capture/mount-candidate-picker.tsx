@@ -8,7 +8,12 @@ export interface MountCandidatePickerOpts extends CandidatePickerProps {
   signature: string;
 }
 
-export function mountCandidatePicker(opts: MountCandidatePickerOpts): { unmount: () => void } {
+export interface MountedCandidatePicker {
+  unmount: () => void;
+  update: (next: Partial<CandidatePickerProps>) => void;
+}
+
+export function mountCandidatePicker(opts: MountCandidatePickerOpts): MountedCandidatePicker {
   const host = document.createElement('div');
   host.setAttribute('data-formpilot-picker', opts.signature);
   host.style.position = 'absolute';
@@ -38,18 +43,23 @@ export function mountCandidatePicker(opts: MountCandidatePickerOpts): { unmount:
   window.addEventListener('resize', onResize);
 
   let reactRoot: Root | null = createRoot(mountNode);
-  reactRoot.render(
-    React.createElement(CandidatePicker, {
-      candidates: opts.candidates,
-      pinnedId: opts.pinnedId,
-      currentCandidateId: opts.currentCandidateId,
-      t: opts.t,
-      onSelect: opts.onSelect,
-      onPinToggle: opts.onPinToggle,
-      onDelete: opts.onDelete,
-      onManageAll: opts.onManageAll,
-    }),
-  );
+
+  let currentProps: CandidatePickerProps = {
+    candidates: opts.candidates,
+    pinnedId: opts.pinnedId,
+    currentCandidateId: opts.currentCandidateId,
+    t: opts.t,
+    onSelect: opts.onSelect,
+    onPinToggle: opts.onPinToggle,
+    onDelete: opts.onDelete,
+    onManageAll: opts.onManageAll,
+  };
+
+  const renderNow = () => {
+    if (!reactRoot) return;
+    reactRoot.render(React.createElement(CandidatePicker, currentProps));
+  };
+  renderNow();
 
   return {
     unmount() {
@@ -58,6 +68,10 @@ export function mountCandidatePicker(opts: MountCandidatePickerOpts): { unmount:
       reactRoot?.unmount();
       reactRoot = null;
       host.remove();
+    },
+    update(next: Partial<CandidatePickerProps>) {
+      currentProps = { ...currentProps, ...next };
+      renderNow();
     },
   };
 }

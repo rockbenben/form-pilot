@@ -2,6 +2,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { FieldCandidate } from '@/lib/storage/form-store';
 
+function lastSeenDomain(url: string): string {
+  if (!url || url === '(manual)') return url || '—';
+  try {
+    const host = new URL(url).hostname;
+    return host.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 export interface CandidatePickerProps {
   candidates: FieldCandidate[];
   pinnedId: string | null;
@@ -84,7 +94,7 @@ export function CandidatePicker({
                     >{c.displayValue ?? c.value}</span>
                   </div>
                   <div style={{ color: '#6b7280', paddingLeft: 16, fontSize: 11 }}>
-                    {t('candidate.picker.lastSeen', { domain: c.lastUrl || '—' })} ·{' '}
+                    {t('candidate.picker.lastSeen', { domain: lastSeenDomain(c.lastUrl) })} ·{' '}
                     {t('candidate.picker.hitCountLabel', { n: String(c.hitCount) })}
                   </div>
                 </button>

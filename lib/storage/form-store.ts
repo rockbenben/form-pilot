@@ -244,6 +244,10 @@ export async function updateCandidate(
   if (!entry) return;
   const c = entry.candidates.find((c) => c.id === candidateId);
   if (!c) return;
+  // Reject edits that would create a duplicate of another candidate.
+  if (entry.candidates.some((other) => other.id !== candidateId && candidateMatches(other, value, displayValue))) {
+    return;
+  }
   c.value = value;
   c.displayValue = displayValue;
   c.updatedAt = Date.now();

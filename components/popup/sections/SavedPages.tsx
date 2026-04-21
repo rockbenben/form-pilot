@@ -12,6 +12,16 @@ function truncate(s: string, n: number): string {
   return s.length > n ? `${s.slice(0, n)}…` : s;
 }
 
+function lastSeenDomain(url: string): string {
+  if (!url || url === '(manual)') return url || '—';
+  try {
+    const host = new URL(url).hostname;
+    return host.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 /** Render a form-pilot value for display — unpacks multi-select separator. */
 function displayValue(v: string): string {
   if (!v) return '—';
@@ -390,7 +400,7 @@ function FormEntryPanel({
                       {c.displayValue ?? c.value}
                     </div>
                     <div className="text-gray-500">
-                      {t('candidate.picker.lastSeen', { domain: c.lastUrl || '—' })} ·{' '}
+                      {t('candidate.picker.lastSeen', { domain: lastSeenDomain(c.lastUrl) })} ·{' '}
                       {t('candidate.picker.hitCountLabel', { n: String(c.hitCount) })} ·{' '}
                       {formatRelativeTime(c.updatedAt, now, t)}
                     </div>
