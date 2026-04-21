@@ -8,6 +8,8 @@ import {
 } from '@/lib/storage/form-store';
 import { setFormPin, deleteCandidate } from '@/lib/storage/form-store';
 import { addCandidate, updateCandidate } from '@/lib/storage/form-store';
+import { resolveCandidate, bumpCandidateHit } from '@/lib/storage/form-store';
+import type { FormEntry } from '@/lib/storage/form-store';
 import { WEAK_CANDIDATE_AGE_MS } from '@/lib/capture/constants';
 import type { CapturedField } from '@/lib/capture/types';
 import { setDomainPref, listFieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
@@ -361,5 +363,104 @@ describe('form-store · cascade cleanup on candidate delete', () => {
     await setDomainPref('email', 'workday.com', entry!.candidates[0].id);
     await clearAllFormEntries();
     expect(await listFieldDomainPrefs()).toEqual({});
+  });
+});
+
+function mkEntry(
+  candidates: Array<Partial<import('@/lib/storage/form-store').FieldCandidate>>,
+  pinnedId: string | null = null,
+): FormEntry {
+  return {
+    signature: 'sig',
+    kind: 'text',
+    label: 'lbl',
+    pinnedId,
+    candidates: candidates.map((c, i) => ({
+      id: c.id ?? `c${i}`,
+      value: c.value ?? `v${i}`,
+      displayValue: c.displayValue,
+      hitCount: c.hitCount ?? 1,
+      createdAt: c.createdAt ?? 0,
+      updatedAt: c.updatedAt ?? 0,
+      lastUrl: c.lastUrl ?? '',
+    })),
+  };
+}
+
+describe('resolveCandidate', () => {
+  it('picks domain pref first', () => {
+    const entry = mkEntry([
+      { id: 'a', hitCount: 10 },
+      { id: 'b', hitCount: 1 },
+    ]);
+    const picked = resolveCandidate(entry, 'workday.com', { 'workday.com': 'b' });
+    expect(picked!.id).toBe('b');
+  });
+
+  it('falls through to pin when the domain pref points to a missing candidate', () => {
+    const entry = mkEntry([
+      { id: 'a', hitCount: 1 },
+      { id: 'b', hitCount: 10 },
+    ], 'a');
+    const picked = resolveCandidate(entry, 'workday.com', { 'workday.com': 'ghost' });
+    expect(picked!.id).toBe('a');
+  });
+
+  it('uses pin when there is no domain pref', () => {
+    const entry = mkEntry([
+      { id: 'a', hitCount: 1 },
+      { id: 'b', hitCount: 10 },
+    ], 'a');
+    expect(resolveCandidate(entry, 'workday.com', {})!.id).toBe('a');
+  });
+
+  it('uses highest hitCount when there is no pin', () => {
+    const entry = mkEntry([
+      { id: 'a', hitCount: 1 },
+      { id: 'b', hitCount: 10 },
+    ]);
+    expect(resolveCandidate(entry, 'workday.com', {})!.id).toBe('b');
+  });
+
+  it('breaks hitCount ties by latest updatedAt', () => {
+    const entry = mkEntry([
+      { id: 'older', hitCount: 3, updatedAt: 100 },
+      { id: 'newer', hitCount: 3, updatedAt: 200 },
+    ]);
+    expect(resolveCandidate(entry, 'workday.com', {})!.id).toBe('newer');
+  });
+
+  it('breaks further ties by earliest createdAt for stability', () => {
+    const entry = mkEntry([
+      { id: 'later-created', hitCount: 3, updatedAt: 100, createdAt: 50 },
+      { id: 'earlier-created', hitCount: 3, updatedAt: 100, createdAt: 10 },
+    ]);
+    expect(resolveCandidate(entry, 'workday.com', {})!.id).toBe('earlier-created');
+  });
+
+  it('returns null for empty candidate list', () => {
+    const entry = mkEntry([]);
+    expect(resolveCandidate(entry, 'workday.com', {})).toBeNull();
+  });
+});
+
+describe('bumpCandidateHit', () => {
+  beforeEach(async () => { await clearAllFormEntries(); });
+
+  it('increments hitCount, updates updatedAt and lastUrl', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    const entry = await getFormEntry('email');
+    const id = entry!.candidates[0].id;
+    const before = entry!.candidates[0].hitCount;
+    await bumpCandidateHit('email', id, 'https://c.com/');
+    const after = await getFormEntry('email');
+    expect(after!.candidates[0].hitCount).toBe(before + 1);
+    expect(after!.candidates[0].lastUrl).toBe('https://c.com/');
+  });
+
+  it('is a no-op for unknown signature / candidate', async () => {
+    await bumpCandidateHit('missing', 'ghost', 'https://x.com/');
+    // No throw; store remains empty.
+    expect(Object.keys(await listFormEntries())).toEqual([]);
   });
 });

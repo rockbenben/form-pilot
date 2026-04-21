@@ -249,3 +249,45 @@ export async function updateCandidate(
   c.updatedAt = Date.now();
   await writeAll(all);
 }
+
+export function resolveCandidate(
+  entry: FormEntry,
+  currentDomain: string,
+  domainPrefs: Record<string, string>,
+): FieldCandidate | null {
+  if (entry.candidates.length === 0) return null;
+
+  const prefId = domainPrefs[currentDomain];
+  if (prefId) {
+    const match = entry.candidates.find((c) => c.id === prefId);
+    if (match) return match;
+  }
+
+  if (entry.pinnedId) {
+    const pinned = entry.candidates.find((c) => c.id === entry.pinnedId);
+    if (pinned) return pinned;
+  }
+
+  const sorted = [...entry.candidates].sort((a, b) => {
+    if (b.hitCount !== a.hitCount) return b.hitCount - a.hitCount;
+    if (b.updatedAt !== a.updatedAt) return b.updatedAt - a.updatedAt;
+    return a.createdAt - b.createdAt;
+  });
+  return sorted[0];
+}
+
+export async function bumpCandidateHit(
+  signature: string,
+  candidateId: string,
+  sourceUrl: string,
+): Promise<void> {
+  const all = await readAll();
+  const entry = all[signature];
+  if (!entry) return;
+  const c = entry.candidates.find((c) => c.id === candidateId);
+  if (!c) return;
+  c.hitCount++;
+  c.updatedAt = Date.now();
+  c.lastUrl = sourceUrl;
+  await writeAll(all);
+}
