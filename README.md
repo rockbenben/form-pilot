@@ -5,45 +5,42 @@
 <h1 align="center">FormPilot</h1>
 
 <p align="center">
-  One-click resume apply across job boards &middot; Cross-site form memory for anything you've answered before
+  Stop typing the same answers into every job application.<br/>
+  Fill once, remember forever, fill anywhere.
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> &middot;
-  <a href="README.zh.md">中文文档</a> &middot;
-  <a href="#architecture">Architecture</a> &middot;
-  <a href="#adding-a-platform-adapter">Extend</a>
+  <a href="#install">Install</a> &middot;
+  <a href="#what-it-does-for-you">What it does</a> &middot;
+  <a href="#how-to-use-it">How to use</a> &middot;
+  <a href="README.zh.md">中文</a>
 </p>
-
-> 365 Open Source Project #008 &middot; One profile, every ATS. Every answer you've typed, remembered. Save, restore, and auto-fill any form.
 
 ---
 
-FormPilot is a form-filling assistant that learns as you go. Build a reusable **profile** for structured personal data, snapshot any half-filled form as a **draft**, **save page values** back into the profile, and **remember form values** per-URL or globally so the same fields fill themselves next time.
+## The problem
 
-## Top use cases
+You're applying to 20 jobs this week. Every site asks the same questions: name, phone, email, city, education, work history, gender, nationality, "emergency contact relationship"... You re-type your resume into 20 different portals. Each has a slightly different widget. Every time you catch yourself typing "未婚" (unmarried) for the hundredth time you wonder why the internet is like this.
 
-- **Job applications** — one profile, every ATS. Fill your name, contact, education, work history, and job preferences across Moka, Workday, Greenhouse, BOSS, Beisen, Feishu, Lagou, Liepin, Zhaopin and more with a single click. Stop re-typing the same resume into 20 different company portals.
-- **Repeat form filling** — surveys, registrations, declarations, onboarding checklists. Any form you've filled once gets remembered. The next time you hit the same question anywhere on the web ("籍贯", "民族", "紧急联系人"…) FormPilot auto-fills the answer you gave last time. Works across sites, even when internal values differ.
+FormPilot fills it for you.
 
-## Why
+## What it does for you
 
-Filling the same personal info across different platforms is tedious. Existing tools miss fields, break on custom widget libraries (jqradio, Select2, iCheck…), and don't handle multi-page forms. FormPilot uses a four-layer cascade so nothing gets left behind:
+**One-click fill.** Your profile (name, contact, education, work, job preferences) fills a whole form in one click. Works on Moka, Workday, Greenhouse, BOSS, Beisen, Lagou, Zhaopin, Feishu, and a lot of smaller Chinese recruiters.
 
-| Phase | How it works | Scope |
-|-------|-------------|-------|
-| **1. Platform Adapters** | Hard-coded rules for known sites (Moka, Workday…) | Per-platform |
-| **2. Heuristic + Profile** | Pattern matching on label/name/placeholder/aria → profile paths | Profile-mapped fields |
-| **3. Page Memory** | Exact per-URL snapshot you captured before | This URL only |
-| **4. Form Entries** | Cross-URL signature match of questions you've filled anywhere | Every site with the same question |
+**Remembers every answer you've ever typed.** Type "已婚" once on Site A. The next time any site asks the same question, it's already filled. Works across different sites even when they use different internal values for the same option (e.g. one site stores "1" for male, another stores "M" — we match on what you see).
 
-Each field tries Phase 1 first, falls through to the next layers. Highlight colors mark the source:
+**Multi-value fields with a picker.** Got a personal phone and a work phone? A personal email and a school email? FormPilot keeps all of them. A small ▾ appears next to the field so you can switch on the fly. It remembers which one you used where (your work email on Workday, your personal on Lagou).
 
-🟢 green = filled from profile &middot; 🟡 yellow = uncertain &middot; 🔴 red = unrecognized &middot; 🟣 purple = per-URL memory &middot; 🩷 pink = cross-URL form entry &middot; 🩵 cyan = restored from draft
+**Draft save and restore.** Half-filled a long application, got interrupted? 💾 → Save Draft. Come back tomorrow, restore in one click. Per-URL, 30-day keep.
 
-## Quick Start
+**Works without fighting weird widgets.** Chinese recruiter sites love custom radio libraries (jqradio, iCheck, Select2, wjx). FormPilot clicks the visible widget the way a user would, instead of just stuffing the hidden input. Group headings ("性别", "民族") get resolved even when the site doesn't wire `<label for>` properly.
 
-**Prerequisites:** Node.js >= 18, pnpm >= 8
+**Sensitive fields stay untouched.** ID numbers, captchas, passwords, bank cards are skipped by default. You opt in per-site if you want those saved.
+
+## Install
+
+**Prerequisites:** Node.js 18+, pnpm 8+
 
 ```bash
 pnpm install
@@ -53,195 +50,121 @@ pnpm run build
 ### Load into Chrome
 
 1. Open `chrome://extensions`
-2. Enable **Developer mode** (top right toggle)
-3. Click **Load unpacked** → select `.output/chrome-mv3`
-4. Pin the extension in the toolbar
+2. Turn on **Developer mode** (top-right toggle)
+3. Click **Load unpacked**, select the `.output/chrome-mv3` folder
+4. Pin the icon to your toolbar
 
-**Usage:**
+That's it. The extension is installed.
 
-- Click the extension icon → **Edit Profile** → fill in your profile data in the Dashboard
-- Navigate to a form page → click the floating **Fill** button, or use **Fill Current Page** from the popup
-- Use the floating **💾** menu to:
-  - **📝 Save Draft** — snapshot this page so you can restore it later
-  - **↩️ Save to Profile** — push your manual corrections back into the active profile
-  - **🧠 Remember This Page** — memorize these form values for auto-fill here AND on any other site asking the same questions
+## How to use it
 
-### Activation
+### First time
 
-The floating toolbar only appears when one of these is true:
+Click the icon → **Edit Profile**. Fill in your info once (or drop in a PDF/Word resume and let the parser pre-fill it — you edit anything wrong). You can keep multiple profiles (English name + Chinese name, or two different job targets) and switch between them.
 
-1. The current host is in your **Settings → Capture → Auto-enable on these domains** list (defaults ship with the major recruitment platforms — mokahr, zhaopin, greenhouse, etc.)
-2. A saved **draft** exists for this exact URL
-3. **Page memory** exists for this URL
-4. You explicitly click **Fill Current Page** from the popup (lazy mount)
+### On a job site
 
-On unlisted pages, FormPilot stays invisible and zero-overhead until invoked.
+Two ways:
 
-### Development
+**A. Floating toolbar** — on supported sites (the major recruiters ship by default), a tiny `[⚡ Fill]` button floats at the edge of the page. Click it.
+
+**B. Popup** — click the FormPilot icon → **Fill This Page**. Works on any site.
+
+Filled fields get color-coded so you can see at a glance what's trustworthy:
+
+🟢 filled from your profile &middot; 🟡 uncertain match, worth checking &middot; 🔴 not recognized, fill yourself &middot; 🟣 remembered from last time you were here &middot; 🩷 remembered from some other site &middot; 🩵 restored from a draft
+
+### Save, remember, restore
+
+FormPilot has a `💾` button in the floating toolbar with three modes:
+
+- **📝 Save Draft** — snapshots the whole page. Come back to the same URL any day in the next 30, click the badge, everything's back.
+- **↩️ Save to Profile** — pushes your manual corrections back into your profile, so next time it fills correctly everywhere.
+- **🧠 Remember This Page** — learns the answers. The same URL fills automatically next time. The same *questions* on any other site also fill ("民族" on a new recruiter you've never used before).
+
+### Multi-value fields (phone / email / anything you've answered more than one way)
+
+When a field has more than one possible answer (your personal phone and your work phone), a small `▾` shows up next to it. Click to pick. The first time you pick a different one on a new domain, it asks "Remember on workday.com?" — say yes, and every future fill on that domain uses that choice.
+
+You manage all your candidates in **Dashboard → Basic Info** (phone / email) and **Dashboard → Saved Pages → Form Records** (everything else you've remembered). Add, edit, rename, delete, pin a default.
+
+## Develop
 
 ```bash
-pnpm run dev          # HMR dev build, auto-reloads extension
-pnpm run test         # 149 unit tests (Vitest)
-pnpm run test:watch   # Watch mode
-pnpm run build        # Production build
+pnpm run dev          # HMR dev build, auto-reloads the extension
+pnpm run test         # 224 unit tests (Vitest)
+pnpm run test:watch
+pnpm run build        # production build to .output/chrome-mv3
 ```
 
-## Features
+## What's under the hood
 
-| Feature | Status |
-|---------|--------|
-| Profile management (multi-profile, 8 sections, CRUD) | Done |
-| Full-page dashboard editor | Done |
-| Popup quick actions (fill + manage) | Done |
-| JSON export / import | Done |
-| PDF / Word profile import (rule-based extraction) | Done |
-| Heuristic engine (34 field types, CN + EN patterns) | Done |
-| Form fillers (text, textarea, select, radio, checkbox, date, multi-select, contenteditable, custom dropdown) | Done |
-| Floating toolbar + status bubble (Shadow DOM isolated) | Done |
-| Multi-page form detection (MutationObserver + URL polling) | Done |
-| Chinese / English UI (switchable in Settings) | Done |
-| Moka platform adapter | Done |
-| **Draft save + restore** (per-URL snapshot with top-right recovery badge) | Done |
-| **Save to profile** (page values → active profile, one click) | Done |
-| **Per-URL page memory** (Phase 3 fallback, purple highlight) | Done |
-| **Multi-value form entries** (Phase 4; keep every past answer per signature; pin / per-domain override; in-page ▾ picker) | Done |
-| **Profile multi-value** (`basic.phone` / `basic.email` keep multiple candidates; pin / per-resume domain override; in-page ▾ picker on profile-filled fields) | Done |
-| **Widget proxy click-through** (jqradio / iCheck / display:none inputs) | Done |
-| **Group-heading label detection** (wjx, Select2, fieldset/legend) | Done |
-| **Opt-in domain list** (Settings-managed auto-activation) | Done |
-| **Saved Pages dashboard** (drafts, memory, form entries) | Done |
-| **Sensitive field filter** (skip ID/captcha/password labels by default) | Done |
-| Additional adapters (Workday, Greenhouse, BOSS, Beisen, Feishu…) | Planned |
-| AI semantic analysis (ONNX Runtime Web + API key) | Planned |
+**Four-phase fill cascade.** Each field tries layers in order until one fills it:
+
+| Layer | What it knows | Scope |
+|-------|---------------|-------|
+| **1. Platform Adapter** | Hard-coded rules for known sites (Moka, Workday…) | Per-platform |
+| **2. Heuristic + Profile** | Pattern matching on label / name / placeholder → your profile | Your profile data |
+| **3. Page Memory** | Snapshot of exactly this URL | This URL only |
+| **4. Form Entries** | Cross-URL match by question signature | Any site with the same question |
+
+**Storage lives on your machine.** Everything is in `chrome.storage.local` (no cloud, no API, nothing leaves your browser). Only an optional AI-matching API key goes in `chrome.storage.session`.
+
+**Shadow-DOM isolation.** All in-page UI (toolbar, draft badge, candidate picker) is mounted inside shadow roots, so host-page CSS never touches it and the extension's styles never touch the host page.
+
+**SPA-aware.** `MutationObserver` + URL polling catches multi-page forms. When the page swaps sub-routes, the engine re-scans.
+
+For full architecture and storage layout, see [ARCHITECTURE.md](#architecture) below. For contributing a platform adapter, see [Adding a Platform Adapter](#adding-a-platform-adapter).
 
 ## Architecture
 
 ```
-┌─ Popup (quick actions) ─────────────────────────────────┐
-│  Active profile status, Fill button, Open Dashboard     │
+┌─ Popup ─────────────────────────────────────────────────┐
+│  Active profile, Fill button, Open Dashboard            │
 └──────────────┬──────────────────────────────────────────┘
                │ chrome.tabs.sendMessage
 ┌─ Content Script (per page) ─────────────────────────────┐
 │                                                         │
-│  ┌─ Floating Toolbar (Shadow DOM, inline) ──────┐       │
-│  │  [⚡ Fill] [3/8] [💾 Save]                    │       │
-│  │              └─ Save Draft / Save to Profile │       │
-│  │                 Remember This Page           │       │
-│  └──────────────────────────────────────────────┘       │
+│  Floating Toolbar: [⚡ Fill] [3/8] [💾 Save]            │
+│                          └─ Save Draft / Save to Profile│
+│                             Remember This Page          │
 │                                                         │
-│  ┌─ Draft Badge (shows when a draft exists) ────┐       │
-│  │  [Restore] [Restore+Fill] [Ignore] [Delete]  │       │
-│  └──────────────────────────────────────────────┘       │
+│  Draft Badge (top-right, appears if draft exists)       │
+│  [Restore] [Restore+Fill] [Ignore] [Delete]             │
 │                                                         │
-│  Cascade Engine (orchestrator + scanner):               │
-│    Phase 1: findAdapter(url) → adapter.scan() + fill()  │
-│    Phase 2: matchField(el) → heuristic + profile fill   │
-│    Phase 3: page memory → per-URL (signature, index)    │
-│    Phase 4: form entries → cross-URL signature match    │
+│  Candidate Picker (▾ next to multi-value fields)        │
+│  Pick a candidate · pin · delete · open Dashboard       │
 │                                                         │
-│  Widget-proxy click sync: hidden native inputs (jqradio,│
-│    iCheck, etc.) trigger their visible proxy's .click() │
-│    so library UI stays in sync.                         │
+│  Cascade Engine: Adapter → Heuristic+Profile → Memory   │
+│                  → Form Entries (cross-URL)             │
 │                                                         │
-│  Highlights: 🟢filled 🟡uncertain 🔴unrecognized        │
-│              🟣memory 🩷form 🩵draft                    │
-│  observeFormChanges() → auto-refill on SPA navigation   │
+│  Highlights mark the source of each fill                │
+│  Widget-proxy click-through for jqradio / iCheck / wjx  │
+│  Auto-refill on SPA navigation                          │
 └──────────────┬──────────────────────────────────────────┘
                │ chrome.runtime.sendMessage
 ┌─ Background Service Worker ─────────────────────────────┐
-│  GET_ACTIVE_RESUME | GET_SETTINGS | SAVE_TOOLBAR_POS    │
-│  SAVE_DRAFT | GET_DRAFT | DELETE_DRAFT | LIST_DRAFTS    │
-│  SAVE_PAGE_MEMORY → also fans out to form-store         │
-│  GET_PAGE_MEMORY | DELETE_PAGE_MEMORY | LIST_PAGE_MEMORY│
-│  GET_FORM_ENTRIES | DELETE_FORM_ENTRY | CLEAR_FORM…     │
-│  WRITE_BACK_TO_RESUME                                   │
+│  Resume / Settings CRUD · Drafts · Page Memory          │
+│  Form Entries (candidates + pin + domain prefs)         │
+│  Profile Candidates (basic.phone / email multi-value)   │
+│  Writeback (saves page values back to your profile)     │
 └──────────────┬──────────────────────────────────────────┘
-               │ chrome.storage.local / .session
+               │ chrome.storage.local
 ┌─ Storage ───────────────────────────────────────────────┐
-│  formpilot:resumes         Resume CRUD                  │
-│  formpilot:activeResumeId  Active resume pointer        │
-│  formpilot:settings        Toolbar pos, skipSensitive,  │
-│                            allowedDomains, locale       │
-│  formpilot:drafts          Per-URL snapshots (30d TTL)  │
-│  formpilot:pageMemory      Per-URL (signature, index)   │
-│  formpilot:formEntries     Cross-URL: candidates[] per s│
-│  formpilot:fieldDomainPrefs Per-sig domain overrides    │
-│  formpilot:profileDomainPrefs Per-resume profile-field domain overrides │
-│  chrome.storage.session    API key only                 │
+│  formpilot:resumes            Your profiles             │
+│  formpilot:activeResumeId     Which one is active       │
+│  formpilot:settings           Toolbar pos, allowed sites│
+│  formpilot:drafts             Per-URL snapshots (30d)   │
+│  formpilot:pageMemory         Per-URL remembered fills  │
+│  formpilot:formEntries        Cross-URL candidate lists │
+│  formpilot:fieldDomainPrefs   Per-sig domain overrides  │
+│  formpilot:profileDomainPrefs Per-resume profile prefs  │
 └─────────────────────────────────────────────────────────┘
-
-┌─ Dashboard (full browser tab) ──────────────────────────┐
-│  Sidebar: Basic | Education | Work | Projects | Skills  │
-│           Job Pref | Custom | Saved Pages | Settings    │
-│  Profile selector (multi-profile) + Import/Export       │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Save modes
-
-| Mode | Trigger | Key | Scope & lifetime |
-|------|---------|-----|------------------|
-| **Draft** | `💾 → Save Draft` | Full URL (hash stripped, query kept) | Per-URL. Top-right badge on next visit. 30-day TTL. Last-write-wins. |
-| **Save to Profile** | `💾 → Save to Profile` | Profile paths recognized on the page | Immediate. Last non-empty value per path pushed into the active profile. |
-| **Remember This Page** | `💾 → Remember This Page` | Two writes in one action — see below | See below |
-
-**Remember-This-Page fans out to two layers in a single click:**
-
-- **Page memory** — `(normalized URL) × (field signature, DOM-order index)`. Exact per-URL match. Fills as **Phase 3** on next visit to the same URL. No expiry.
-- **Form entries** — per-signature list of candidates (every distinct past answer kept, not overwritten). Phase 4 fill picks via: domain override → global pin (★) → highest hitCount. Multi-candidate fields get an in-page ▾ picker so users can switch per field; picking on a new domain triggers a toast asking whether to remember the choice there. Radio/select store `displayValue` (option text) so the answer still matches when another site uses different internal values.
-
-Sensitive fields (ID numbers, captchas, passwords, bank cards) are skipped by default. Toggle in **Settings → Capture**. Draft-restored fields get flagged so subsequent Phase 1-4 fills leave them alone.
-
-## Project Structure
-
-```
-entrypoints/
-  popup/            Quick-action popup
-  dashboard/        Full-page profile editor
-  background.ts     Service worker (message routing)
-  content.ts        Content script (cascade + toolbar + draft badge)
-components/
-  popup/            Shared UI (Sidebar, FormField, sections/, SavedPages)
-  toolbar/          Floating toolbar + result bubble (Shadow DOM mount)
-  capture/          Save menu, toast, draft badge (Shadow DOM mount)
-lib/
-  storage/
-    resume-store.ts      Resume CRUD
-    settings-store.ts    Settings (skipSensitive, allowedDomains, ...)
-    draft-store.ts       Per-URL draft snapshots, 30-day TTL, auto GC on save
-    page-memory-store.ts Per-URL memory, (signature, index) merge
-    form-store.ts        Cross-URL FormEntry by signature (Phase 4)
-  engine/
-    orchestrator.ts      Cascade dispatch (adapter → heuristic → memory → form)
-    scanner.ts           Pure field identification (no DOM mutation)
-    heuristic/           Pattern matching, signal extraction, fillers
-    adapters/            Platform-specific adapters
-  capture/
-    types.ts             CapturedField, DraftSnapshot, PageMemoryEntry
-    serializer.ts        DOM → CapturedField[] (filters, size limits)
-    restorer.ts          CapturedField[] → DOM (selector + signature fallback)
-    writeback.ts         Aggregate page values → Resume patch
-    memory-phase.ts      Phase 3 per-URL fallback
-    form-phase.ts        Phase 4 cross-URL signature fill
-    signature.ts         hash(label | placeholder | aria-label) + group heading
-    element-value.ts     Shared read-current-value helper
-    sensitive.ts         Sensitive-label detection + size constants
-    url-key.ts           URL normalization (draft vs memory)
-    time-format.ts       Relative time formatter
-    css-escape.ts        CSS.escape polyfill (shared by serializer + fillers)
-    native-set.ts        React-safe .value / .checked setters
-    widget-proxy.ts      Find + click visible proxies for hidden native inputs
-    domain-match.ts      Hostname suffix matching for allowedDomains
-  import/           PDF (pdfjs-dist) + Word (mammoth) parsing
-  i18n/             zh + en translations, React context, {var} substitution
-tests/
-  lib/              149 unit tests across 19 files
-  e2e/              Playwright setup + test form page
 ```
 
 ## Adding a Platform Adapter
 
-1. Create `lib/engine/adapters/my-platform.ts`:
+If a site has a standard widget library (ATS platforms usually do), you can hard-code fast rules for it. Put a file at `lib/engine/adapters/my-platform.ts`:
 
 ```typescript
 import type { PlatformAdapter, FieldMapping, InputType } from './types';
@@ -262,8 +185,7 @@ export const myPlatformAdapter: PlatformAdapter = {
 };
 ```
 
-2. Register in `lib/engine/adapters/registry.ts`
-3. Add the domain to `DEFAULT_ALLOWED_DOMAINS` in `lib/storage/types.ts` so the toolbar auto-activates there
+Register it in `lib/engine/adapters/registry.ts` and add the domain to `DEFAULT_ALLOWED_DOMAINS` in `lib/storage/types.ts` so the toolbar auto-activates.
 
 ## Tech Stack
 
