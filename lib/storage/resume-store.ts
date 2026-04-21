@@ -118,6 +118,26 @@ export async function importResume(json: string): Promise<Resume> {
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('Invalid resume JSON: not an object');
   }
+  // Legacy single-value schema compatibility: wrap string phone/email into
+  // single-candidate arrays so old JSONs remain importable.
+  if (parsed.basic && typeof parsed.basic === 'object') {
+    const now = Date.now();
+    if (typeof parsed.basic.phone === 'string') {
+      const v = parsed.basic.phone;
+      parsed.basic.phone = v
+        ? [{ id: crypto.randomUUID(), value: v, label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '(imported)' }]
+        : [];
+      parsed.basic.phonePinnedId = null;
+    }
+    if (typeof parsed.basic.email === 'string') {
+      const v = parsed.basic.email;
+      parsed.basic.email = v
+        ? [{ id: crypto.randomUUID(), value: v, label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '(imported)' }]
+        : [];
+      parsed.basic.emailPinnedId = null;
+    }
+  }
+
   // Merge with empty resume to fill missing fields
   const base = createEmptyResume(generateId(), parsed.meta?.name ?? 'Imported');
   const resume: Resume = {

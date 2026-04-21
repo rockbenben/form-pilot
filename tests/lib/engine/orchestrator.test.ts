@@ -18,13 +18,16 @@ function buildForm(fields: { label: string; name: string; type?: string }[]): HT
 }
 
 describe('orchestrateFill', () => {
+  const now = Date.now();
   const resume: Resume = {
     ...createEmptyResume('test', 'test'),
     basic: {
       ...createEmptyResume('', '').basic,
       name: '张三',
-      email: 'z@test.com',
-      phone: '13812345678',
+      email: [{ id: 'e1', value: 'z@test.com', label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '' }],
+      emailPinnedId: null,
+      phone: [{ id: 'p1', value: '13812345678', label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '' }],
+      phonePinnedId: null,
     },
   };
 

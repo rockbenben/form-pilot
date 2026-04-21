@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   createResume, getResume, listResumes, updateResume, deleteResume, renameResume,
-  getActiveResumeId, setActiveResumeId,
+  getActiveResumeId, setActiveResumeId, importResume,
 } from '@/lib/storage/resume-store';
 
 describe('resume-store', () => {
@@ -38,11 +38,13 @@ describe('resume-store', () => {
 
   it('updates resume fields and bumps updatedAt', async () => {
     const created = await createResume('test');
+    const now = Date.now();
+    const emailCandidate = { id: 'e1', value: 'z@test.com', label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '' };
     const updated = await updateResume(created.meta.id, {
-      basic: { ...created.basic, name: '张三', email: 'z@test.com' },
+      basic: { ...created.basic, name: '张三', email: [emailCandidate] },
     });
     expect(updated.basic.name).toBe('张三');
-    expect(updated.basic.email).toBe('z@test.com');
+    expect(updated.basic.email[0].value).toBe('z@test.com');
     expect(updated.meta.updatedAt).toBeGreaterThanOrEqual(created.meta.updatedAt);
   });
 
@@ -86,5 +88,38 @@ describe('resume-store', () => {
 
   it('rename throws when id not found', async () => {
     await expect(renameResume('nope', 'x')).rejects.toThrow();
+  });
+});
+
+describe('resume-store · importResume legacy schema', () => {
+  it('wraps a legacy string phone into a single-candidate array', async () => {
+    // chrome.storage is cleared before each test by the global beforeEach in setup.ts
+    const legacy = JSON.stringify({
+      meta: { name: 'old' },
+      basic: { phone: '138xxxxxxxx', email: '' },
+    });
+    const resume = await importResume(legacy);
+    expect(Array.isArray(resume.basic.phone)).toBe(true);
+    expect(resume.basic.phone).toHaveLength(1);
+    expect(resume.basic.phone[0].value).toBe('138xxxxxxxx');
+    expect(resume.basic.phone[0].hitCount).toBe(0);
+    expect(resume.basic.phone[0].lastUrl).toBe('(imported)');
+    expect(resume.basic.phonePinnedId).toBeNull();
+    expect(resume.basic.email).toEqual([]);
+    expect(resume.basic.emailPinnedId).toBeNull();
+  });
+
+  it('leaves already-array phone/email untouched', async () => {
+    // chrome.storage is cleared before each test by the global beforeEach in setup.ts
+    const now = Date.now();
+    const cand = { id: 'c1', value: 'a@b.com', label: 'p', hitCount: 2, createdAt: now, updatedAt: now, lastUrl: '' };
+    const modern = JSON.stringify({
+      meta: { name: 'new' },
+      basic: { phone: [], email: [cand], phonePinnedId: null, emailPinnedId: 'c1' },
+    });
+    const resume = await importResume(modern);
+    expect(resume.basic.email).toHaveLength(1);
+    expect(resume.basic.email[0].id).toBe('c1');
+    expect(resume.basic.emailPinnedId).toBe('c1');
   });
 });

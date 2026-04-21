@@ -43,7 +43,14 @@ export function getValueFromResume(resume: Resume, path: string): string {
     cursor = cursor[part];
   }
   if (cursor === null || cursor === undefined) return '';
-  if (Array.isArray(cursor)) return cursor.join(', ');
+  if (Array.isArray(cursor)) {
+    // FieldCandidate[] (Phase B): resolve to first candidate's value.
+    // Task 7 will replace this with proper pinnedId / hitCount resolution.
+    if (cursor.length > 0 && typeof cursor[0] === 'object' && cursor[0] !== null && 'value' in cursor[0]) {
+      return String((cursor[0] as { value: unknown }).value ?? '');
+    }
+    return cursor.join(', ');
+  }
   return String(cursor);
 }
 

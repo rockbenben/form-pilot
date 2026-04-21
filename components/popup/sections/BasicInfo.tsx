@@ -38,14 +38,14 @@ export default function BasicInfoSection({ data, onChange }: BasicInfoProps) {
         />
         <FormField
           label={t('basic.phone')}
-          value={data.phone}
-          onChange={(v) => onChange({ phone: v })}
+          value={data.phone[0]?.value ?? ''}
+          onChange={() => { /* TODO(Phase B Task 13): replace with CandidateListField */ }}
           placeholder="138xxxxxxxx"
         />
         <FormField
           label={t('basic.email')}
-          value={data.email}
-          onChange={(v) => onChange({ email: v })}
+          value={data.email[0]?.value ?? ''}
+          onChange={() => { /* TODO(Phase B Task 13): replace with CandidateListField */ }}
           placeholder="user@example.com"
         />
         <FormField
