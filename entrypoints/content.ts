@@ -17,6 +17,7 @@ import { normalizeDomain, type FieldDomainPrefs } from '@/lib/storage/domain-pre
 import { makeT } from '@/lib/i18n';
 import { computeSignatureFor } from '@/lib/capture/signature';
 import { fillElement } from '@/lib/engine/heuristic/fillers';
+import { detectElementKind } from '@/lib/capture/element-value';
 import { mountCandidatePicker, type MountedCandidatePicker } from '@/components/capture/mount-candidate-picker';
 
 export default defineContentScript({
@@ -187,7 +188,11 @@ export default defineContentScript({
             onSelect: async (cid) => {
               const picked = state.candidates.find((c) => c.id === cid);
               if (!picked) return;
-              try { await fillElement(it.element as Element, picked.value, 'text'); } catch { /* ignore */ }
+              // Detect current widget kind — phone/email can be text, tel, or
+              // even a <select> for country-code splits. Hardcoding 'text' here
+              // silently failed on non-text widgets.
+              const kind = detectElementKind(it.element as Element) ?? 'text';
+              try { await fillElement(it.element as Element, picked.value, kind); } catch { /* ignore */ }
               chrome.runtime.sendMessage({
                 type: 'BUMP_PROFILE_HIT',
                 resumePath,
@@ -263,8 +268,11 @@ export default defineContentScript({
                 const picked = entry.candidates.find((c) => c.id === cid);
                 if (!picked) return;
                 const val = picked.displayValue && picked.displayValue.length > 0 ? picked.displayValue : picked.value;
+                // Detect the CURRENT element's kind — the stored entry.kind can diverge
+                // if the same signature is rendered by a different widget on this site.
+                const kind = detectElementKind(it.element as Element) ?? entry.kind;
                 try {
-                  await fillElement(it.element as Element, val, entry.kind);
+                  await fillElement(it.element as Element, val, kind);
                 } catch { /* ignore */ }
                 chrome.runtime.sendMessage({
                   type: 'BUMP_FORM_HIT',
