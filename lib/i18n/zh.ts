@@ -226,4 +226,13 @@ export const zh = {
   'candidate.dashboard.displayValuePlaceholder': '显示文本（select/radio 用）',
   'candidate.dashboard.save': '保存',
   'candidate.dashboard.cancel': '取消',
+
+  // ── Profile 多值候选（Phase B）─────────────────────────────
+  'profile.candidate.add': '+ 新增',
+  'profile.candidate.labelPlaceholder': '标签（个人/工作）',
+  'profile.candidate.valuePlaceholder.phone': '手机号',
+  'profile.candidate.valuePlaceholder.email': '邮箱',
+  'profile.candidate.noCandidates': '未填写',
+  'profile.candidate.save': '保存',
+  'profile.candidate.cancel': '取消',
 };
