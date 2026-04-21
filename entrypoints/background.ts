@@ -184,14 +184,40 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
 
     // ── Write-back to resume ─────────────────────────────────────────────
     case 'WRITE_BACK_TO_RESUME': {
-      const { pairs } = (message as unknown) as { pairs: { resumePath: string; value: string }[] };
+      const { pairs, sourceUrl } = (message as unknown) as {
+        pairs: { resumePath: string; value: string }[];
+        sourceUrl?: string;
+      };
       const id = await getActiveResumeId();
       if (!id) return { ok: false, error: 'no active resume' };
       const resume = await getResume(id);
       if (!resume) return { ok: false, error: 'active resume not found' };
-      const updated = applyWriteback(resume, pairs);
-      const { meta: _m, ...patch } = updated;
-      await updateResume(id, patch);
+
+      // Split pairs: profile multi-value paths go through upsertProfileCandidate,
+      // everything else through the legacy applyWriteback.
+      const profilePaths = new Set(['basic.phone', 'basic.email']);
+      const profilePairs = pairs.filter((p) => profilePaths.has(p.resumePath));
+      const legacyPairs = pairs.filter((p) => !profilePaths.has(p.resumePath));
+
+      if (profilePairs.length > 0) {
+        const { upsertProfileCandidate } = await import('@/lib/storage/profile-candidates');
+        for (const { resumePath, value } of profilePairs) {
+          if (!value) continue;
+          await upsertProfileCandidate(
+            id,
+            resumePath as 'basic.phone' | 'basic.email',
+            value,
+            sourceUrl ?? '',
+          );
+        }
+      }
+
+      if (legacyPairs.length > 0) {
+        const updated = applyWriteback(resume, legacyPairs);
+        const { meta: _m, ...patch } = updated;
+        await updateResume(id, patch);
+      }
+
       return { ok: true, data: { updated: pairs.length, name: resume.meta.name } };
     }
 

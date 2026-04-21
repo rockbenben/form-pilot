@@ -259,7 +259,7 @@ export default defineContentScript({
       const items = await scanFields(document, adapter);
       const pairs = collectWriteBack(items);
       if (pairs.length === 0) return { ok: false, msg: t('capture.toast.nothingToWriteBack') };
-      const res = await chrome.runtime.sendMessage({ type: 'WRITE_BACK_TO_RESUME', pairs });
+      const res = await chrome.runtime.sendMessage({ type: 'WRITE_BACK_TO_RESUME', pairs, sourceUrl: window.location.href });
       if (res?.ok) {
         return {
           ok: true,
