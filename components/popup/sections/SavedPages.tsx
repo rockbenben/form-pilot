@@ -434,7 +434,7 @@ function FormEntryPanel({
           )}
           <div className="flex gap-2 text-xs">
             <button className="text-blue-400" onClick={submitAdd}>{t('candidate.dashboard.save')}</button>
-            <button className="text-gray-400" onClick={() => setAdding(false)}>{t('candidate.dashboard.cancel')}</button>
+            <button className="text-gray-400" onClick={() => { setAdding(false); setAddValue(''); setAddDisplayValue(''); }}>{t('candidate.dashboard.cancel')}</button>
           </div>
         </div>
       ) : (
@@ -458,6 +458,7 @@ function FormEntryPanel({
                   </span>
                   <button
                     className="text-red-400 hover:text-red-300"
+                    title={t('candidate.picker.delete')}
                     onClick={() => clearDomainOverride(domain)}
                   >🗑</button>
                 </div>
