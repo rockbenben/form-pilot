@@ -1,3 +1,5 @@
+import type { FieldCandidate } from '@/lib/capture/candidate';
+
 // ─── Resume Meta ─────────────────────────────────────────────────────────────
 
 export interface ResumeMeta {
@@ -12,8 +14,10 @@ export interface ResumeMeta {
 export interface BasicInfo {
   name: string;
   nameEn: string;
-  phone: string;
-  email: string;
+  phone: FieldCandidate[];           // Phase B: multi-candidate
+  phonePinnedId: string | null;      // Phase B
+  email: FieldCandidate[];           // Phase B: multi-candidate
+  emailPinnedId: string | null;      // Phase B
   gender: string;
   /** YYYY-MM-DD */
   birthday: string;
@@ -140,8 +144,10 @@ export function createEmptyResume(id: string, name: string): Resume {
     basic: {
       name: '',
       nameEn: '',
-      phone: '',
-      email: '',
+      phone: [],
+      phonePinnedId: null,
+      email: [],
+      emailPinnedId: null,
       gender: '',
       birthday: '',
       age: 0,

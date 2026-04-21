@@ -1,15 +1,25 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { BasicInfo } from '@/lib/storage/types';
 import { FormField, TagListField } from '../FormField';
+import CandidateListField from '../CandidateListField';
 import { useI18n } from '@/lib/i18n';
 
 interface BasicInfoProps {
   data: BasicInfo;
   onChange: (patch: Partial<BasicInfo>) => void;
+  refreshFromStorage: () => Promise<void>;
 }
 
-export default function BasicInfoSection({ data, onChange }: BasicInfoProps) {
+export default function BasicInfoSection({ data, onChange, refreshFromStorage }: BasicInfoProps) {
   const { t } = useI18n();
+  const [profileDomainPrefs, setProfileDomainPrefs] = useState<Record<string, Record<string, string>>>({});
+
+  const refreshPrefs = useCallback(async () => {
+    const res = await chrome.runtime.sendMessage({ type: 'LIST_PROFILE_DOMAIN_PREFS' });
+    setProfileDomainPrefs(res?.ok ? (res.data as Record<string, Record<string, string>>) : {});
+  }, []);
+
+  useEffect(() => { refreshPrefs(); }, [refreshPrefs]);
 
   const updateSocialLink = (key: string, value: string) => {
     const updated = { ...data.socialLinks };
@@ -19,6 +29,11 @@ export default function BasicInfoSection({ data, onChange }: BasicInfoProps) {
       delete updated[key];
     }
     onChange({ socialLinks: updated });
+  };
+
+  const withRefresh = async (msg: Record<string, unknown>) => {
+    await chrome.runtime.sendMessage(msg);
+    await refreshFromStorage();
   };
 
   return (
@@ -36,18 +51,56 @@ export default function BasicInfoSection({ data, onChange }: BasicInfoProps) {
           onChange={(v) => onChange({ nameEn: v })}
           placeholder="San Zhang"
         />
-        <FormField
-          label={t('basic.phone')}
-          value={data.phone}
-          onChange={(v) => onChange({ phone: v })}
-          placeholder="138xxxxxxxx"
-        />
-        <FormField
-          label={t('basic.email')}
-          value={data.email}
-          onChange={(v) => onChange({ email: v })}
-          placeholder="user@example.com"
-        />
+      </div>
+      <CandidateListField
+        label={t('basic.phone')}
+        candidates={data.phone}
+        pinnedId={data.phonePinnedId}
+        domainPrefs={profileDomainPrefs['basic.phone'] ?? {}}
+        valueInputPlaceholder={t('profile.candidate.valuePlaceholder.phone')}
+        onAdd={async (value, label) => {
+          await withRefresh({ type: 'ADD_PROFILE_CANDIDATE', resumePath: 'basic.phone', value, label });
+        }}
+        onUpdate={async (id, value, label) => {
+          await withRefresh({ type: 'UPDATE_PROFILE_CANDIDATE', resumePath: 'basic.phone', candidateId: id, value, label });
+        }}
+        onDelete={async (id) => {
+          await withRefresh({ type: 'DELETE_PROFILE_CANDIDATE', resumePath: 'basic.phone', candidateId: id });
+          await refreshPrefs();
+        }}
+        onSetPin={async (id) => {
+          await withRefresh({ type: 'SET_PROFILE_PIN', resumePath: 'basic.phone', candidateId: id });
+        }}
+        onClearDomainPref={async (domain) => {
+          await chrome.runtime.sendMessage({ type: 'CLEAR_PROFILE_DOMAIN_PREF', resumePath: 'basic.phone', domain });
+          await refreshPrefs();
+        }}
+      />
+      <CandidateListField
+        label={t('basic.email')}
+        candidates={data.email}
+        pinnedId={data.emailPinnedId}
+        domainPrefs={profileDomainPrefs['basic.email'] ?? {}}
+        valueInputPlaceholder={t('profile.candidate.valuePlaceholder.email')}
+        onAdd={async (value, label) => {
+          await withRefresh({ type: 'ADD_PROFILE_CANDIDATE', resumePath: 'basic.email', value, label });
+        }}
+        onUpdate={async (id, value, label) => {
+          await withRefresh({ type: 'UPDATE_PROFILE_CANDIDATE', resumePath: 'basic.email', candidateId: id, value, label });
+        }}
+        onDelete={async (id) => {
+          await withRefresh({ type: 'DELETE_PROFILE_CANDIDATE', resumePath: 'basic.email', candidateId: id });
+          await refreshPrefs();
+        }}
+        onSetPin={async (id) => {
+          await withRefresh({ type: 'SET_PROFILE_PIN', resumePath: 'basic.email', candidateId: id });
+        }}
+        onClearDomainPref={async (domain) => {
+          await chrome.runtime.sendMessage({ type: 'CLEAR_PROFILE_DOMAIN_PREF', resumePath: 'basic.email', domain });
+          await refreshPrefs();
+        }}
+      />
+      <div className="grid grid-cols-2 gap-x-3">
         <FormField
           label={t('basic.gender')}
           value={data.gender}

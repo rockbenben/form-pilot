@@ -51,7 +51,7 @@ export async function runFormPhase(
     const entry = entries[sig];
     if (!entry) continue;
 
-    const candidate = resolveCandidate(entry, currentDomain, domainPrefs[sig] ?? {});
+    const candidate = resolveCandidate(entry.candidates, entry.pinnedId, currentDomain, domainPrefs[sig] ?? {});
     if (!candidate) continue;
 
     const fillValue = candidate.displayValue && candidate.displayValue.length > 0

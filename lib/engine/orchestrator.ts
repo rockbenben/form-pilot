@@ -7,20 +7,59 @@ import { runFormPhase } from '@/lib/capture/form-phase';
 import type { PageMemoryEntry } from '@/lib/capture/types';
 import type { FormEntry } from '@/lib/storage/form-store';
 import type { FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
+import { resolveCandidate } from '@/lib/capture/candidate';
 
 // ─── Resume Path Resolver ─────────────────────────────────────────────────────
 
 /**
  * Resolve a dotted resume path to a string value.
  *
+ * basic.phone / basic.email route through resolveCandidate — using
+ * currentDomain and the active resume's profileDomainPrefs, a candidate is
+ * picked (domain pref > pin > hitCount > updatedAt > createdAt). Other paths
+ * resolve with the legacy dotted walk.
+ *
+ * When a profile candidate is picked, `onProfilePick` is invoked with the
+ * (resumePath, candidateId) so the caller can bump hitCount after fill.
+ *
  * - 'basic.name'              → resume.basic.name
+ * - 'basic.phone'             → resolved candidate's value (or '' if empty)
+ * - 'basic.email'             → resolved candidate's value (or '' if empty)
  * - 'education.school'        → resume.education[0].school (first entry)
  * - 'education[1].school'     → resume.education[1].school (explicit index)
- * - 'work.company'            → resume.work[0].company
  * - 'basic.socialLinks.github'→ resume.basic.socialLinks['github']
- * - Array values are joined with ', '
+ * - Array-of-string values are joined with ', '
  */
-export function getValueFromResume(resume: Resume, path: string): string {
+export function getValueFromResume(
+  resume: Resume,
+  path: string,
+  currentDomain: string = '',
+  profileDomainPrefs: Record<string, Record<string, string>> = {},
+  onProfilePick?: (resumePath: string, candidateId: string) => void,
+): string {
+  // Phase B: profile multi-value dispatch.
+  if (path === 'basic.phone') {
+    const picked = resolveCandidate(
+      resume.basic.phone,
+      resume.basic.phonePinnedId,
+      currentDomain,
+      profileDomainPrefs['basic.phone'] ?? {},
+    );
+    if (picked && onProfilePick) onProfilePick(path, picked.id);
+    return picked?.value ?? '';
+  }
+  if (path === 'basic.email') {
+    const picked = resolveCandidate(
+      resume.basic.email,
+      resume.basic.emailPinnedId,
+      currentDomain,
+      profileDomainPrefs['basic.email'] ?? {},
+    );
+    if (picked && onProfilePick) onProfilePick(path, picked.id);
+    return picked?.value ?? '';
+  }
+
+  // Legacy dotted-path resolver.
   const indexMatch = path.match(/^(\w+)\[(\d+)\]\.(.+)$/);
   if (indexMatch) {
     const [, section, indexStr, field] = indexMatch;
@@ -60,9 +99,11 @@ export async function orchestrateFill(
   formEntries: Record<string, FormEntry> = {},
   domainPrefs: FieldDomainPrefs = {},
   currentDomain: string = '',
+  profileDomainPrefs: Record<string, Record<string, string>> = {},
 ): Promise<FillResult> {
   const scanned = await scanFields(doc, adapter);
   const items: FillResultItem[] = [];
+  const profileHits: Array<{ resumePath: string; candidateId: string }> = [];
 
   for (const s of scanned) {
     if ((s.element as HTMLElement).getAttribute?.('data-formpilot-restored') === 'draft') continue;
@@ -79,7 +120,13 @@ export async function orchestrateFill(
       continue;
     }
 
-    const value = getValueFromResume(resume, s.resumePath);
+    const value = getValueFromResume(
+      resume,
+      s.resumePath,
+      currentDomain,
+      profileDomainPrefs,
+      (path, candidateId) => { profileHits.push({ resumePath: path, candidateId }); },
+    );
     let filled = false;
     if (value) {
       try {
@@ -147,5 +194,12 @@ export async function orchestrateFill(
   const filled = items.filter((i) => i.status === 'filled').length;
   const uncertain = items.filter((i) => i.status === 'uncertain').length;
   const unrecognized = items.filter((i) => i.status === 'unrecognized').length;
-  return { items, filled, uncertain, unrecognized, formHits };
+  return {
+    items,
+    filled,
+    uncertain,
+    unrecognized,
+    formHits,
+    profileHits: profileHits.length > 0 ? profileHits : undefined,
+  };
 }

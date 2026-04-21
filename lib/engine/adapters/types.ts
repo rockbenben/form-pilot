@@ -36,6 +36,8 @@ export interface FillResult {
   unrecognized: number;
   /** Phase 4 candidate selections — one per successfully filled field. Present only when at least one Phase 4 fill succeeded. */
   formHits?: Array<{ signature: string; candidateId: string }>;
+  /** Phase 2 profile candidate selections — one per profile field filled from a multi-candidate array. */
+  profileHits?: Array<{ resumePath: string; candidateId: string }>;
 }
 
 export interface StepInfo {

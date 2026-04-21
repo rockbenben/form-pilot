@@ -19,6 +19,9 @@ const mockStorage = {
       const keyList = typeof keys === 'string' ? [keys] : keys;
       for (const k of keyList) delete store[k];
     },
+    clear: async () => {
+      for (const k of Object.keys(store)) delete store[k];
+    },
   },
 };
 

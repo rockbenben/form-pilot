@@ -55,6 +55,12 @@ export default function App() {
     }
   }, []);
 
+  const refreshActiveResume = useCallback(async () => {
+    if (!activeId) return;
+    const all = await listResumes();
+    setResumes(all);
+  }, [activeId]);
+
   const activeResume = resumes.find((r) => r.meta.id === activeId) ?? null;
 
   // ─── Hash routing on mount ────────────────────────────────────────────────
@@ -253,6 +259,7 @@ export default function App() {
           <BasicInfoSection
             data={activeResume.basic}
             onChange={(patch) => handleUpdate({ basic: { ...activeResume.basic, ...patch } })}
+            refreshFromStorage={refreshActiveResume}
           />
         );
       case 'education':

@@ -3,20 +3,22 @@ import {
   WEAK_CANDIDATE_AGE_MS,
   WEAK_CANDIDATE_HIT_THRESHOLD,
 } from '@/lib/capture/constants';
-import { clearPrefsPointingToCandidate, clearDomainPrefsForSignature, clearAllFieldDomainPrefs } from './domain-prefs-store';
+import {
+  clearPrefsPointingToCandidate,
+  clearDomainPrefsForSignature,
+  clearAllFieldDomainPrefs,
+} from './domain-prefs-store';
+import {
+  type FieldCandidate,
+  candidateMatches,
+  resolveCandidate,
+} from '@/lib/capture/candidate';
+
+// Re-export so Phase A external callers keep compiling unchanged.
+export type { FieldCandidate } from '@/lib/capture/candidate';
+export { resolveCandidate } from '@/lib/capture/candidate';
 
 const KEY = 'formpilot:formEntries';
-
-/** One saved alternate for a signature. */
-export interface FieldCandidate {
-  id: string;
-  value: string;
-  displayValue?: string;
-  hitCount: number;
-  createdAt: number;
-  updatedAt: number;
-  lastUrl: string;
-}
 
 /** Cross-URL record for one signature. */
 export interface FormEntry {
@@ -36,10 +38,6 @@ async function readAll(): Promise<FormEntriesMap> {
 
 async function writeAll(all: FormEntriesMap): Promise<void> {
   await chrome.storage.local.set({ [KEY]: all });
-}
-
-function candidateMatches(c: FieldCandidate, value: string, displayValue?: string): boolean {
-  return c.value === value && (c.displayValue ?? '') === (displayValue ?? '');
 }
 
 /** Construct a fresh FieldCandidate. Callers pass `hitCount: 0` for manually-added candidates; `1` for real saves. */
@@ -252,32 +250,6 @@ export async function updateCandidate(
   c.displayValue = displayValue;
   c.updatedAt = Date.now();
   await writeAll(all);
-}
-
-export function resolveCandidate(
-  entry: FormEntry,
-  currentDomain: string,
-  domainPrefs: Record<string, string>,
-): FieldCandidate | null {
-  if (entry.candidates.length === 0) return null;
-
-  const prefId = domainPrefs[currentDomain];
-  if (prefId) {
-    const match = entry.candidates.find((c) => c.id === prefId);
-    if (match) return match;
-  }
-
-  if (entry.pinnedId) {
-    const pinned = entry.candidates.find((c) => c.id === entry.pinnedId);
-    if (pinned) return pinned;
-  }
-
-  const sorted = [...entry.candidates].sort((a, b) => {
-    if (b.hitCount !== a.hitCount) return b.hitCount - a.hitCount;
-    if (b.updatedAt !== a.updatedAt) return b.updatedAt - a.updatedAt;
-    return a.createdAt - b.createdAt;
-  });
-  return sorted[0];
 }
 
 export async function bumpCandidateHit(

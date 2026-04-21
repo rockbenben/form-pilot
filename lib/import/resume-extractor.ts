@@ -220,13 +220,20 @@ function escapeRegex(s: string): string {
 
 export function toResume(extracted: ExtractedResume, id: string, resumeName: string): Resume {
   const base = createEmptyResume(id, resumeName);
+  const now = Date.now();
   return {
     ...base,
     basic: {
       ...base.basic,
       name: extracted.basic.name,
-      email: extracted.basic.email,
-      phone: extracted.basic.phone,
+      phone: extracted.basic.phone
+        ? [{ id: crypto.randomUUID(), value: extracted.basic.phone, label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '(imported)' }]
+        : [],
+      phonePinnedId: null,
+      email: extracted.basic.email
+        ? [{ id: crypto.randomUUID(), value: extracted.basic.email, label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '(imported)' }]
+        : [],
+      emailPinnedId: null,
     },
     education: extracted.education.map((e) => ({
       ...base.education[0] ?? {

@@ -18,13 +18,16 @@ function buildForm(fields: { label: string; name: string; type?: string }[]): HT
 }
 
 describe('orchestrateFill', () => {
+  const now = Date.now();
   const resume: Resume = {
     ...createEmptyResume('test', 'test'),
     basic: {
       ...createEmptyResume('', '').basic,
       name: '张三',
-      email: 'z@test.com',
-      phone: '13812345678',
+      email: [{ id: 'e1', value: 'z@test.com', label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '' }],
+      emailPinnedId: null,
+      phone: [{ id: 'p1', value: '13812345678', label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '' }],
+      phonePinnedId: null,
     },
   };
 
@@ -125,5 +128,30 @@ describe('orchestrateFill with page memory', () => {
     expect(result.filled).toBe(1);
     expect((el as HTMLInputElement).value).toBe('test@x.com');
     expect(result.formHits).toEqual([{ signature: sig, candidateId: 'c1' }]);
+  });
+});
+
+describe('orchestrateFill with profile multi-candidate', () => {
+  it('picks a phone candidate via domain pref and emits profileHits', async () => {
+    document.body.innerHTML = `<label for="p">手机</label><input id="p" name="phone">`;
+    const el = document.getElementById('p') as HTMLInputElement;
+
+    const now = Date.now();
+    const resume = createEmptyResume('r1', 'Test');
+    resume.basic.phone = [
+      { id: 'personal', value: '138xxxxxxxx', label: '个人', hitCount: 10, createdAt: now, updatedAt: now, lastUrl: '' },
+      { id: 'work', value: '150xxxxxxxx', label: '工作', hitCount: 1, createdAt: now, updatedAt: now, lastUrl: '' },
+    ];
+    resume.basic.phonePinnedId = null;
+
+    const profileDomainPrefs: Record<string, Record<string, string>> = {
+      'basic.phone': { 'workday.com': 'work' },
+    };
+
+    const result = await orchestrateFill(
+      document, resume, null, [], {}, {}, 'workday.com', profileDomainPrefs,
+    );
+    expect(el.value).toBe('150xxxxxxxx');
+    expect(result.profileHits).toEqual([{ resumePath: 'basic.phone', candidateId: 'work' }]);
   });
 });

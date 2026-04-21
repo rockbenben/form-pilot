@@ -208,4 +208,13 @@ export const en = {
   'candidate.dashboard.displayValuePlaceholder': 'Display text (for select/radio)',
   'candidate.dashboard.save': 'Save',
   'candidate.dashboard.cancel': 'Cancel',
+
+  // ── Profile multi-value (Phase B) ─────────────────────────────
+  'profile.candidate.add': '+ Add',
+  'profile.candidate.labelPlaceholder': 'Label (Personal / Work)',
+  'profile.candidate.valuePlaceholder.phone': 'Phone number',
+  'profile.candidate.valuePlaceholder.email': 'Email address',
+  'profile.candidate.noCandidates': 'Not set',
+  'profile.candidate.save': 'Save',
+  'profile.candidate.cancel': 'Cancel',
 };

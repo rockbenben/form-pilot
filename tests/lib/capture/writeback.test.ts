@@ -67,11 +67,13 @@ describe('applyWriteback', () => {
   it('writes scalar basic fields', () => {
     const resume = createEmptyResume('id', 'name');
     const updated = applyWriteback(resume, [
-      { resumePath: 'basic.email', value: 'a@a' },
       { resumePath: 'basic.name', value: '李四' },
+      { resumePath: 'basic.gender', value: '男' },
     ]);
-    expect(updated.basic.email).toBe('a@a');
+    // NOTE: basic.email/phone are now FieldCandidate[]; writeback for those
+    // paths is handled by Task 7. This test only covers plain string fields.
     expect(updated.basic.name).toBe('李四');
+    expect(updated.basic.gender).toBe('男');
   });
 
   it('writes indexed array fields, growing the array', () => {
