@@ -25,14 +25,22 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
     // otherwise be 3 separate chrome.runtime.sendMessage calls
     // (GET_ACTIVE_RESUME, GET_PAGE_MEMORY, GET_FORM_ENTRIES) into one.
     case 'GET_FILL_CONTEXT': {
-      const { memoryUrl } = (message as unknown) as { memoryUrl?: string };
+      const { memoryUrl, pageDomain } = (message as unknown) as {
+        memoryUrl?: string;
+        pageDomain?: string;
+      };
       const id = await getActiveResumeId();
-      const [resume, memory, formEntries] = await Promise.all([
+      const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
+      const [resume, memory, formEntries, domainPrefs] = await Promise.all([
         id ? getResume(id) : Promise.resolve(null),
         memoryUrl ? memStore.getPageMemory(memoryUrl) : Promise.resolve([]),
         formStore.listFormEntries(),
+        domainPrefsStore.listFieldDomainPrefs(),
       ]);
-      return { ok: true, data: { resume, memory, formEntries } };
+      return {
+        ok: true,
+        data: { resume, memory, formEntries, domainPrefs, currentDomain: pageDomain ?? '' },
+      };
     }
     case 'GET_SETTINGS':
       return { ok: true, data: await getSettings() };
@@ -105,6 +113,74 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
     case 'CLEAR_FORM_ENTRIES':
       await formStore.clearAllFormEntries();
       return { ok: true };
+
+    case 'DELETE_FORM_CANDIDATE': {
+      const { signature, candidateId } = (message as unknown) as {
+        signature: string;
+        candidateId: string;
+      };
+      await formStore.deleteCandidate(signature, candidateId);
+      return { ok: true };
+    }
+    case 'UPDATE_FORM_CANDIDATE': {
+      const { signature, candidateId, value, displayValue } = (message as unknown) as {
+        signature: string;
+        candidateId: string;
+        value: string;
+        displayValue?: string;
+      };
+      await formStore.updateCandidate(signature, candidateId, value, displayValue);
+      return { ok: true };
+    }
+    case 'ADD_FORM_CANDIDATE': {
+      const { signature, value, displayValue } = (message as unknown) as {
+        signature: string;
+        value: string;
+        displayValue?: string;
+      };
+      const newId = await formStore.addCandidate(signature, value, displayValue);
+      return { ok: true, data: { id: newId } };
+    }
+    case 'SET_FORM_PIN': {
+      const { signature, candidateId } = (message as unknown) as {
+        signature: string;
+        candidateId: string | null;
+      };
+      await formStore.setFormPin(signature, candidateId);
+      return { ok: true };
+    }
+    case 'BUMP_FORM_HIT': {
+      const { signature, candidateId, sourceUrl } = (message as unknown) as {
+        signature: string;
+        candidateId: string;
+        sourceUrl: string;
+      };
+      await formStore.bumpCandidateHit(signature, candidateId, sourceUrl);
+      return { ok: true };
+    }
+    case 'LIST_DOMAIN_PREFS': {
+      const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
+      return { ok: true, data: await domainPrefsStore.listFieldDomainPrefs() };
+    }
+    case 'SET_DOMAIN_PREF': {
+      const { signature, domain, candidateId } = (message as unknown) as {
+        signature: string;
+        domain: string;
+        candidateId: string;
+      };
+      const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
+      await domainPrefsStore.setDomainPref(signature, domain, candidateId);
+      return { ok: true };
+    }
+    case 'CLEAR_DOMAIN_PREF': {
+      const { signature, domain } = (message as unknown) as {
+        signature: string;
+        domain: string;
+      };
+      const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
+      await domainPrefsStore.clearDomainPref(signature, domain);
+      return { ok: true };
+    }
 
     // ── Write-back to resume ─────────────────────────────────────────────
     case 'WRITE_BACK_TO_RESUME': {
