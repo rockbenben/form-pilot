@@ -37,10 +37,11 @@ async function writeAll(all: FormEntriesMap): Promise<void> {
   await chrome.storage.local.set({ [KEY]: all });
 }
 
-function sameOption(c: FieldCandidate, value: string, displayValue?: string): boolean {
+function candidateMatches(c: FieldCandidate, value: string, displayValue?: string): boolean {
   return c.value === value && (c.displayValue ?? '') === (displayValue ?? '');
 }
 
+/** Construct a fresh FieldCandidate. Callers pass `hitCount: 0` for manually-added candidates; `1` for real saves. */
 function newCandidate(
   value: string,
   displayValue: string | undefined,
@@ -84,7 +85,6 @@ export async function saveFormEntries(
 
   const all = await readAll();
   const now = Date.now();
-  const touched: string[] = [];
   let saved = 0;
 
   for (const [sig, f] of bySignature) {
@@ -101,7 +101,7 @@ export async function saveFormEntries(
       entry.label = f.label;
       if (f.kind === 'checkbox') {
         const only = entry.candidates[0];
-        if (only && sameOption(only, f.value, f.displayValue)) {
+        if (only && candidateMatches(only, f.value, f.displayValue)) {
           only.hitCount++;
           only.updatedAt = now;
           only.lastUrl = sourceUrl;
@@ -110,7 +110,7 @@ export async function saveFormEntries(
           entry.pinnedId = null;
         }
       } else {
-        const match = entry.candidates.find((c) => sameOption(c, f.value, f.displayValue));
+        const match = entry.candidates.find((c) => candidateMatches(c, f.value, f.displayValue));
         if (match) {
           match.hitCount++;
           match.updatedAt = now;
@@ -120,11 +120,10 @@ export async function saveFormEntries(
         }
       }
     }
-    touched.push(sig);
     saved++;
   }
 
-  for (const sig of touched) {
+  for (const sig of bySignature.keys()) {
     const entry = all[sig];
     gcEntry(entry, now);
     if (entry && entry.candidates.length === 0) delete all[sig];

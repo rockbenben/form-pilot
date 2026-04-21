@@ -4,6 +4,7 @@ import {
   getFormEntry,
   listFormEntries,
   clearAllFormEntries,
+  deleteFormEntry,
 } from '@/lib/storage/form-store';
 import type { CapturedField } from '@/lib/capture/types';
 
@@ -135,6 +136,22 @@ describe('form-store · listing & clearing', () => {
       'https://a.com/',
     );
     await clearAllFormEntries();
+    expect(Object.keys(await listFormEntries())).toEqual([]);
+  });
+});
+
+describe('form-store · deleteFormEntry', () => {
+  beforeEach(async () => { await clearAllFormEntries(); });
+
+  it('removes an entry by signature', async () => {
+    await saveFormEntries([mk('x', 'v', 'text')], 'https://a.com/');
+    expect(await getFormEntry('x')).not.toBeNull();
+    await deleteFormEntry('x');
+    expect(await getFormEntry('x')).toBeNull();
+  });
+
+  it('is a no-op for an unknown signature', async () => {
+    await deleteFormEntry('ghost');
     expect(Object.keys(await listFormEntries())).toEqual([]);
   });
 });
