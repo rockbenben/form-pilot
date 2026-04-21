@@ -201,9 +201,22 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
 
       // Split pairs: profile multi-value paths go through upsertProfileCandidate,
       // everything else through the legacy applyWriteback.
+      //
+      // Order matters: legacy writeback MUST run first. applyWriteback operates on a
+      // snapshot of `resume` taken above, then writes the whole `basic` sub-record
+      // back via updateResume. If we ran profile upserts first, their mutations to
+      // basic.phone/basic.email would be clobbered when legacy writeback writes its
+      // stale snapshot. Running legacy first, then profile upserts (which re-read
+      // resume from storage inside), avoids the lost-update race.
       const profilePaths = new Set(['basic.phone', 'basic.email']);
       const profilePairs = pairs.filter((p) => profilePaths.has(p.resumePath));
       const legacyPairs = pairs.filter((p) => !profilePaths.has(p.resumePath));
+
+      if (legacyPairs.length > 0) {
+        const updated = applyWriteback(resume, legacyPairs);
+        const { meta: _m, ...patch } = updated;
+        await updateResume(id, patch);
+      }
 
       if (profilePairs.length > 0) {
         const { upsertProfileCandidate } = await import('@/lib/storage/profile-candidates');
@@ -216,12 +229,6 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
             sourceUrl ?? '',
           );
         }
-      }
-
-      if (legacyPairs.length > 0) {
-        const updated = applyWriteback(resume, legacyPairs);
-        const { meta: _m, ...patch } = updated;
-        await updateResume(id, patch);
       }
 
       return { ok: true, data: { updated: pairs.length, name: resume.meta.name } };
