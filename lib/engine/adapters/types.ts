@@ -34,7 +34,7 @@ export interface FillResult {
   filled: number;
   uncertain: number;
   unrecognized: number;
-  /** Phase 4 candidate selections. Present only when Phase 4 produced fills. */
+  /** Phase 4 candidate selections — one per successfully filled field. Present only when at least one Phase 4 fill succeeded. */
   formHits?: Array<{ signature: string; candidateId: string }>;
 }
 

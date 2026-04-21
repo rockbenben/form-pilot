@@ -4,6 +4,7 @@ import type { Resume } from '@/lib/storage/types';
 import { createEmptyResume } from '@/lib/storage/types';
 import { computeSignatureFor } from '@/lib/capture/signature';
 import type { PageMemoryEntry } from '@/lib/capture/types';
+import type { FormEntriesMap } from '@/lib/storage/form-store';
 
 function buildForm(fields: { label: string; name: string; type?: string }[]): HTMLFormElement {
   const form = document.createElement('form');
@@ -96,5 +97,33 @@ describe('orchestrateFill with page memory', () => {
     ];
     await orchestrateFill(document, resume, null, entries);
     expect(q.value).toBe('my draft answer');
+  });
+
+  it('fills unrecognized fields from Phase 4 form entries and emits formHits', async () => {
+    const resume: Resume = createEmptyResume('t', 't');
+    // Use a label that won't match heuristically so the field stays unrecognized
+    document.body.innerHTML = `<label for="xyzabc">Random Field 12345</label><input id="xyzabc" name="xyzabc">`;
+    const el = document.getElementById('xyzabc')!;
+    const sig = computeSignatureFor(el);
+    const entries: FormEntriesMap = {
+      [sig]: {
+        signature: sig,
+        kind: 'text',
+        label: 'Random Field 12345',
+        pinnedId: null,
+        candidates: [{
+          id: 'c1',
+          value: 'test@x.com',
+          hitCount: 1,
+          createdAt: 0,
+          updatedAt: 0,
+          lastUrl: '',
+        }],
+      },
+    };
+    const result = await orchestrateFill(document, resume, null, [], entries, {}, 'example.com');
+    expect(result.filled).toBe(1);
+    expect((el as HTMLInputElement).value).toBe('test@x.com');
+    expect(result.formHits).toEqual([{ signature: sig, candidateId: 'c1' }]);
   });
 });
