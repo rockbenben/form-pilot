@@ -1,0 +1,2 @@
+export const WEAK_CANDIDATE_HIT_THRESHOLD = 2;
+export const WEAK_CANDIDATE_AGE_MS = 30 * 24 * 3600 * 1000;
