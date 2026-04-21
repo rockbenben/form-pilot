@@ -3,7 +3,7 @@ import {
   WEAK_CANDIDATE_AGE_MS,
   WEAK_CANDIDATE_HIT_THRESHOLD,
 } from '@/lib/capture/constants';
-import { clearPrefsPointingToCandidate, clearDomainPrefsForSignature } from './domain-prefs-store';
+import { clearPrefsPointingToCandidate, clearDomainPrefsForSignature, clearAllFieldDomainPrefs } from './domain-prefs-store';
 
 const KEY = 'formpilot:formEntries';
 
@@ -183,6 +183,7 @@ export async function deleteFormEntry(signature: string): Promise<void> {
 
 export async function clearAllFormEntries(): Promise<void> {
   await chrome.storage.local.set({ [KEY]: {} });
+  await clearAllFieldDomainPrefs();
 }
 
 export async function setFormPin(

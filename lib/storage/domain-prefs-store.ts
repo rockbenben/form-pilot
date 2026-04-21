@@ -57,6 +57,10 @@ export async function clearPrefsPointingToCandidate(
   await writeAll(all);
 }
 
+export async function clearAllFieldDomainPrefs(): Promise<void> {
+  await chrome.storage.local.set({ [KEY]: {} });
+}
+
 /** Normalize a hostname for use as a domain-pref key. Strips leading `www.`. */
 export function normalizeDomain(hostname: string): string {
   return hostname.replace(/^www\./, '');

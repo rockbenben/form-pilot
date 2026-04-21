@@ -48,6 +48,15 @@ describe('domain-prefs-store', () => {
     expect(all['email']).toEqual({ 'lagou.com': 'keep' });
   });
 
+  it('clearPrefsPointingToCandidate removes all domains pointing to deleted id', async () => {
+    await setDomainPref('email', 'workday.com', 'stale');
+    await setDomainPref('email', 'greenhouse.io', 'stale');
+    await setDomainPref('email', 'lagou.com', 'keep');
+    await clearPrefsPointingToCandidate('email', 'stale');
+    const all = await listFieldDomainPrefs();
+    expect(all['email']).toEqual({ 'lagou.com': 'keep' });
+  });
+
   it('normalizeDomain strips www. prefix', () => {
     expect(normalizeDomain('www.example.com')).toBe('example.com');
     expect(normalizeDomain('example.com')).toBe('example.com');

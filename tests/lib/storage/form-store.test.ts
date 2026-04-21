@@ -354,4 +354,12 @@ describe('form-store · cascade cleanup on candidate delete', () => {
     await deleteFormEntry('email');
     expect((await listFieldDomainPrefs())['email']).toBeUndefined();
   });
+
+  it('clearAllFormEntries also clears all domain prefs', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    const entry = await getFormEntry('email');
+    await setDomainPref('email', 'workday.com', entry!.candidates[0].id);
+    await clearAllFormEntries();
+    expect(await listFieldDomainPrefs()).toEqual({});
+  });
 });
