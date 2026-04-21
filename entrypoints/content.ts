@@ -1,6 +1,6 @@
 import { findAdapter } from '@/lib/engine/adapters/registry';
 import { orchestrateFill } from '@/lib/engine/orchestrator';
-import type { FillResult } from '@/lib/engine/adapters/types';
+import type { FillResult, FillResultItem } from '@/lib/engine/adapters/types';
 import type { Resume, Settings } from '@/lib/storage/types';
 import { DEFAULT_ALLOWED_DOMAINS, createEmptyResume } from '@/lib/storage/types';
 import type { DraftSnapshot, PageMemoryEntry } from '@/lib/capture/types';
@@ -18,6 +18,7 @@ import { makeT } from '@/lib/i18n';
 import { computeSignatureFor } from '@/lib/capture/signature';
 import { fillElement } from '@/lib/engine/heuristic/fillers';
 import { mountCandidatePicker, type MountedCandidatePicker } from '@/components/capture/mount-candidate-picker';
+import type { FieldCandidate } from '@/lib/capture/candidate';
 
 export default defineContentScript({
   // Injection is scoped by the in-script form-element gate below (> 3 inputs);
@@ -76,6 +77,7 @@ export default defineContentScript({
       formEntries: Record<string, FormEntry>;
       domainPrefs: FieldDomainPrefs;
       currentDomain: string;
+      profileDomainPrefs: Record<string, Record<string, string>>;
     }
 
     /**
@@ -100,6 +102,7 @@ export default defineContentScript({
             formEntries: data.formEntries ?? {},
             domainPrefs: data.domainPrefs ?? {},
             currentDomain: data.currentDomain || currentDomain,
+            profileDomainPrefs: data.profileDomainPrefs ?? {},
           };
         }
       } catch { /* ignore */ }
@@ -109,6 +112,7 @@ export default defineContentScript({
         formEntries: {},
         domainPrefs: {},
         currentDomain,
+        profileDomainPrefs: {},
       };
     }
 
@@ -119,7 +123,7 @@ export default defineContentScript({
       for (const p of mountedPickers) { try { p.unmount(); } catch { /* ignore */ } }
       mountedPickers = [];
       try {
-        const { resume, memory, formEntries, domainPrefs, currentDomain } = await fetchFillContext();
+        const { resume, memory, formEntries, domainPrefs, currentDomain, profileDomainPrefs } = await fetchFillContext();
         const adapter = findAdapter(window.location.href);
         // A missing resume is fine — memory + form entries still let us fill.
         const effectiveResume = resume ?? createEmptyResume('_', '_');
@@ -131,6 +135,7 @@ export default defineContentScript({
           formEntries,
           domainPrefs,
           currentDomain,
+          profileDomainPrefs,
         );
         applyFieldHighlights(result);
         // Fire-and-forget BUMP_FORM_HIT for every Phase 4 fill.
@@ -144,48 +149,63 @@ export default defineContentScript({
           });
         }
 
-        // Mount a ▾ picker beside every multi-candidate Phase 4 field.
-        for (const it of result.items) {
-          if (it.source !== 'form') continue;
-          if (!it.element) continue;
-          const sig = computeSignatureFor(it.element);
-          const entry = formEntries[sig];
-          if (!entry) continue;
-          if (entry.kind === 'checkbox') continue;
-          if (entry.candidates.length < 2) continue;
+        const profileHits = result.profileHits ?? [];
+        for (const hit of profileHits) {
+          chrome.runtime.sendMessage({
+            type: 'BUMP_PROFILE_HIT',
+            resumePath: hit.resumePath,
+            candidateId: hit.candidateId,
+            sourceUrl: window.location.href,
+          });
+        }
 
-          const currentCandidateId = hits.find((h) => h.signature === sig)?.candidateId ?? null;
+        // Helper: mount a ▾ picker for a Phase 2 profile multi-value field.
+        // Defined here (inside handleFill's try block) so it closes over
+        // `resume`, `currentDomain`, `t`, `promptedDomainPrefs`, and
+        // `mountedPickers` from the surrounding scopes.
+        function mountProfilePickerInline(
+          it: FillResultItem,
+          resumePath: 'basic.phone' | 'basic.email',
+          currentCandidateId: string | null,
+        ) {
+          if (!resume) return;
+          // Hold mutable state on a single object so pin-toggle and delete
+          // callbacks share their view across repeat invocations (scalar-param
+          // reassignment won't persist across the picker's callback lifetime).
+          const state = {
+            candidates: resumePath === 'basic.phone' ? resume.basic.phone : resume.basic.email,
+            pinnedId: resumePath === 'basic.phone' ? resume.basic.phonePinnedId : resume.basic.emailPinnedId,
+          };
 
           let picker: MountedCandidatePicker;
           picker = mountCandidatePicker({
-            target: it.element,
-            signature: sig,
-            t,
-            candidates: entry.candidates,
-            pinnedId: entry.pinnedId,
+            target: it.element as Element,
+            signature: `profile:${resumePath}`,
+            candidates: state.candidates,
+            pinnedId: state.pinnedId,
             currentCandidateId,
+            t,
             onSelect: async (cid) => {
-              const picked = entry.candidates.find((c) => c.id === cid);
+              const picked = state.candidates.find((c) => c.id === cid);
               if (!picked) return;
-              const val = picked.displayValue && picked.displayValue.length > 0 ? picked.displayValue : picked.value;
-              try {
-                await fillElement(it.element as Element, val, entry.kind);
-              } catch { /* ignore */ }
+              try { await fillElement(it.element as Element, picked.value, 'text'); } catch { /* ignore */ }
               chrome.runtime.sendMessage({
-                type: 'BUMP_FORM_HIT',
-                signature: sig,
+                type: 'BUMP_PROFILE_HIT',
+                resumePath,
                 candidateId: cid,
                 sourceUrl: window.location.href,
               });
-              // First switch in this session for (sig, domain) → ask whether to remember.
-              const promptKey = `${sig}:${currentDomain}`;
+              const promptKey = `profile:${resumePath}:${currentDomain}`;
               if (!promptedDomainPrefs.has(promptKey)) {
                 promptedDomainPrefs.add(promptKey);
-                const msg = t('candidate.domainPref.rememberToast', { domain: currentDomain, value: val });
+                const msg = t('candidate.domainPref.rememberToast', {
+                  domain: currentDomain,
+                  value: picked.label ?? picked.value,
+                });
                 if (window.confirm(msg)) {
                   chrome.runtime.sendMessage({
-                    type: 'SET_DOMAIN_PREF',
-                    signature: sig,
+                    type: 'SET_PROFILE_DOMAIN_PREF',
+                    resumePath,
                     domain: currentDomain,
                     candidateId: cid,
                   });
@@ -193,28 +213,116 @@ export default defineContentScript({
               }
             },
             onPinToggle: async (cid) => {
-              const next = entry.pinnedId === cid ? null : cid;
-              await chrome.runtime.sendMessage({ type: 'SET_FORM_PIN', signature: sig, candidateId: next });
-              entry.pinnedId = next;
+              const next = state.pinnedId === cid ? null : cid;
+              await chrome.runtime.sendMessage({ type: 'SET_PROFILE_PIN', resumePath, candidateId: next });
+              state.pinnedId = next;
               picker.update({ pinnedId: next });
             },
             onDelete: async (cid) => {
-              await chrome.runtime.sendMessage({ type: 'DELETE_FORM_CANDIDATE', signature: sig, candidateId: cid });
-              entry.candidates = entry.candidates.filter((c) => c.id !== cid);
-              picker.update({ candidates: entry.candidates, pinnedId: entry.pinnedId });
-              // If this entry now has < 2 candidates, unmount the picker entirely.
-              if (entry.candidates.length < 2) {
-                const idx = mountedPickers.indexOf(picker);
-                if (idx >= 0) mountedPickers.splice(idx, 1);
+              await chrome.runtime.sendMessage({ type: 'DELETE_PROFILE_CANDIDATE', resumePath, candidateId: cid });
+              const idx = state.candidates.findIndex((c) => c.id === cid);
+              if (idx >= 0) state.candidates.splice(idx, 1);
+              if (state.pinnedId === cid) state.pinnedId = null;
+              picker.update({ candidates: state.candidates, pinnedId: state.pinnedId });
+              if (state.candidates.length < 2) {
+                const mIdx = mountedPickers.indexOf(picker);
+                if (mIdx >= 0) mountedPickers.splice(mIdx, 1);
                 picker.unmount();
               }
             },
             onManageAll: () => {
-              const url = chrome.runtime.getURL('/dashboard.html') + '#savedPages';
+              const url = chrome.runtime.getURL('/dashboard.html') + '#basic';
               window.open(url, '_blank');
             },
           });
           mountedPickers.push(picker);
+        }
+
+        // Mount a ▾ picker beside every multi-candidate field.
+        for (const it of result.items) {
+          if (!it.element) continue;
+
+          // Phase 4: signature-keyed form entries (Phase A, unchanged).
+          if (it.source === 'form') {
+            const sig = computeSignatureFor(it.element);
+            const entry = formEntries[sig];
+            if (!entry) continue;
+            if (entry.kind === 'checkbox') continue;
+            if (entry.candidates.length < 2) continue;
+
+            const currentCandidateId = hits.find((h) => h.signature === sig)?.candidateId ?? null;
+
+            let picker: MountedCandidatePicker;
+            picker = mountCandidatePicker({
+              target: it.element,
+              signature: sig,
+              t,
+              candidates: entry.candidates,
+              pinnedId: entry.pinnedId,
+              currentCandidateId,
+              onSelect: async (cid) => {
+                const picked = entry.candidates.find((c) => c.id === cid);
+                if (!picked) return;
+                const val = picked.displayValue && picked.displayValue.length > 0 ? picked.displayValue : picked.value;
+                try {
+                  await fillElement(it.element as Element, val, entry.kind);
+                } catch { /* ignore */ }
+                chrome.runtime.sendMessage({
+                  type: 'BUMP_FORM_HIT',
+                  signature: sig,
+                  candidateId: cid,
+                  sourceUrl: window.location.href,
+                });
+                // First switch in this session for (sig, domain) → ask whether to remember.
+                const promptKey = `${sig}:${currentDomain}`;
+                if (!promptedDomainPrefs.has(promptKey)) {
+                  promptedDomainPrefs.add(promptKey);
+                  const msg = t('candidate.domainPref.rememberToast', { domain: currentDomain, value: val });
+                  if (window.confirm(msg)) {
+                    chrome.runtime.sendMessage({
+                      type: 'SET_DOMAIN_PREF',
+                      signature: sig,
+                      domain: currentDomain,
+                      candidateId: cid,
+                    });
+                  }
+                }
+              },
+              onPinToggle: async (cid) => {
+                const next = entry.pinnedId === cid ? null : cid;
+                await chrome.runtime.sendMessage({ type: 'SET_FORM_PIN', signature: sig, candidateId: next });
+                entry.pinnedId = next;
+                picker.update({ pinnedId: next });
+              },
+              onDelete: async (cid) => {
+                await chrome.runtime.sendMessage({ type: 'DELETE_FORM_CANDIDATE', signature: sig, candidateId: cid });
+                entry.candidates = entry.candidates.filter((c) => c.id !== cid);
+                picker.update({ candidates: entry.candidates, pinnedId: entry.pinnedId });
+                // If this entry now has < 2 candidates, unmount the picker entirely.
+                if (entry.candidates.length < 2) {
+                  const idx = mountedPickers.indexOf(picker);
+                  if (idx >= 0) mountedPickers.splice(idx, 1);
+                  picker.unmount();
+                }
+              },
+              onManageAll: () => {
+                const url = chrome.runtime.getURL('/dashboard.html') + '#savedPages';
+                window.open(url, '_blank');
+              },
+            });
+            mountedPickers.push(picker);
+            continue;
+          }
+
+          // Phase 2: profile multi-value (basic.phone / basic.email).
+          if (it.resumePath === 'basic.phone' || it.resumePath === 'basic.email') {
+            if (!resume) continue;
+            const rp = it.resumePath;
+            const candidates = rp === 'basic.phone' ? resume.basic.phone : resume.basic.email;
+            if (candidates.length < 2) continue;
+            const currentCandidateId = profileHits.find((h) => h.resumePath === rp)?.candidateId ?? null;
+            mountProfilePickerInline(it, rp, currentCandidateId);
+          }
         }
 
         return result;
