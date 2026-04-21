@@ -154,4 +154,23 @@ describe('orchestrateFill with profile multi-candidate', () => {
     expect(el.value).toBe('150xxxxxxxx');
     expect(result.profileHits).toEqual([{ resumePath: 'basic.phone', candidateId: 'work' }]);
   });
+
+  it('does NOT emit profileHits when fill fails (e.g. draft-gated field)', async () => {
+    // A field flagged as draft-restored is skipped by the fill loop entirely.
+    // Before the fix, onProfilePick fired during getValueFromResume regardless of
+    // whether the fill executed — inflating hitCount for ghost fills.
+    document.body.innerHTML = `<label for="p">手机</label><input id="p" name="phone" data-formpilot-restored="draft" value="draft val">`;
+
+    const now = Date.now();
+    const resume = createEmptyResume('r1', 'Test');
+    resume.basic.phone = [
+      { id: 'c1', value: '138xxxxxxxx', label: 'A', hitCount: 1, createdAt: now, updatedAt: now, lastUrl: '' },
+      { id: 'c2', value: '150xxxxxxxx', label: 'B', hitCount: 1, createdAt: now, updatedAt: now, lastUrl: '' },
+    ];
+    resume.basic.phonePinnedId = null;
+
+    const result = await orchestrateFill(document, resume, null, [], {}, {}, '', {});
+    // The field was draft-gated — no fill, no hit.
+    expect(result.profileHits).toBeUndefined();
+  });
 });

@@ -120,12 +120,16 @@ export async function orchestrateFill(
       continue;
     }
 
+    // Collect the picked profile candidate (if any) but don't record it as a hit
+    // until after fill succeeds — otherwise read-only / wrong-widget / draft-gated
+    // fields would inflate hitCount for fills that never happened.
+    let pickedProfile: { resumePath: string; candidateId: string } | null = null;
     const value = getValueFromResume(
       resume,
       s.resumePath,
       currentDomain,
       profileDomainPrefs,
-      (path, candidateId) => { profileHits.push({ resumePath: path, candidateId }); },
+      (path, candidateId) => { pickedProfile = { resumePath: path, candidateId }; },
     );
     let filled = false;
     if (value) {
@@ -137,6 +141,7 @@ export async function orchestrateFill(
         }
       } catch { filled = false; }
     }
+    if (filled && pickedProfile) profileHits.push(pickedProfile);
 
     let status: FillResultItem['status'];
     if (!filled) status = 'unrecognized';
