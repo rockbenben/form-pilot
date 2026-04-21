@@ -14,8 +14,8 @@ export function countFields(resume: Resume): { filled: number; total: number } {
   // Basic info
   const b = resume.basic;
   countString(b.name);
-  countString(b.phone);
-  countString(b.email);
+  countArray(b.phone);
+  countArray(b.email);
   countString(b.gender);
   countString(b.birthday);
   countString(b.nationality);

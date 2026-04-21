@@ -18,7 +18,6 @@ import { makeT } from '@/lib/i18n';
 import { computeSignatureFor } from '@/lib/capture/signature';
 import { fillElement } from '@/lib/engine/heuristic/fillers';
 import { mountCandidatePicker, type MountedCandidatePicker } from '@/components/capture/mount-candidate-picker';
-import type { FieldCandidate } from '@/lib/capture/candidate';
 
 export default defineContentScript({
   // Injection is scoped by the in-script form-element gate below (> 3 inputs);

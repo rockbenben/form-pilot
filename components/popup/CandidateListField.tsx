@@ -168,7 +168,7 @@ export default function CandidateListField({
 
       {Object.keys(domainPrefs).length > 0 && (
         <div className="mt-2 pt-2 border-t border-gray-800 text-xs">
-          <div className="text-gray-500 mb-1">Domain overrides</div>
+          <div className="text-gray-500 mb-1">{t('candidate.dashboard.domainOverrides')}</div>
           <div className="space-y-1">
             {Object.entries(domainPrefs).map(([domain, candidateId]) => {
               const c = candidates.find((x) => x.id === candidateId);
