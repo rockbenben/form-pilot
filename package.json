@@ -1,7 +1,7 @@
 {
   "name": "formpilot",
-  "version": "0.1.0",
-  "description": "One-click resume apply + cross-site form memory. Fill job applications across Moka/Workday/Greenhouse/BOSS and auto-reuse any form answer you've given before. 一键投递简历 + 跨站表单复填。",
+  "version": "0.3.0",
+  "description": "Fill forms once, remember forever, auto-fill anywhere. One-click job-application autofill across Moka, Workday, Greenhouse, BOSS, Lagou + more. 填一次，处处自动复填。",
   "private": true,
   "type": "module",
   "license": "MIT",
