@@ -31,15 +31,21 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
       };
       const id = await getActiveResumeId();
       const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
-      const [resume, memory, formEntries, domainPrefs] = await Promise.all([
+      const profileDomainPrefsStore = await import('@/lib/storage/profile-domain-prefs-store');
+      const [resume, memory, formEntries, domainPrefs, profileDomainPrefs] = await Promise.all([
         id ? getResume(id) : Promise.resolve(null),
         memoryUrl ? memStore.getPageMemory(memoryUrl) : Promise.resolve([]),
         formStore.listFormEntries(),
         domainPrefsStore.listFieldDomainPrefs(),
+        id ? profileDomainPrefsStore.listForResume(id) : Promise.resolve({}),
       ]);
       return {
         ok: true,
-        data: { resume, memory, formEntries, domainPrefs, currentDomain: pageDomain ?? '' },
+        data: {
+          resume, memory, formEntries, domainPrefs,
+          currentDomain: pageDomain ?? '',
+          profileDomainPrefs,
+        },
       };
     }
     case 'GET_SETTINGS':
@@ -219,6 +225,95 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
       }
 
       return { ok: true, data: { updated: pairs.length, name: resume.meta.name } };
+    }
+
+    case 'BUMP_PROFILE_HIT': {
+      const { resumePath, candidateId, sourceUrl } = (message as unknown) as {
+        resumePath: 'basic.phone' | 'basic.email';
+        candidateId: string;
+        sourceUrl: string;
+      };
+      const id = await getActiveResumeId();
+      if (!id) return { ok: false, error: 'no active resume' };
+      const { bumpProfileCandidateHit } = await import('@/lib/storage/profile-candidates');
+      await bumpProfileCandidateHit(id, resumePath, candidateId, sourceUrl);
+      return { ok: true };
+    }
+    case 'SET_PROFILE_PIN': {
+      const { resumePath, candidateId } = (message as unknown) as {
+        resumePath: 'basic.phone' | 'basic.email';
+        candidateId: string | null;
+      };
+      const id = await getActiveResumeId();
+      if (!id) return { ok: false, error: 'no active resume' };
+      const { setProfilePin } = await import('@/lib/storage/profile-candidates');
+      await setProfilePin(id, resumePath, candidateId);
+      return { ok: true };
+    }
+    case 'ADD_PROFILE_CANDIDATE': {
+      const { resumePath, value, label } = (message as unknown) as {
+        resumePath: 'basic.phone' | 'basic.email';
+        value: string;
+        label: string;
+      };
+      const id = await getActiveResumeId();
+      if (!id) return { ok: false, error: 'no active resume' };
+      const { addProfileCandidate } = await import('@/lib/storage/profile-candidates');
+      const newId = await addProfileCandidate(id, resumePath, value, label);
+      return { ok: true, data: { id: newId } };
+    }
+    case 'UPDATE_PROFILE_CANDIDATE': {
+      const { resumePath, candidateId, value, label } = (message as unknown) as {
+        resumePath: 'basic.phone' | 'basic.email';
+        candidateId: string;
+        value: string;
+        label: string;
+      };
+      const id = await getActiveResumeId();
+      if (!id) return { ok: false, error: 'no active resume' };
+      const { updateProfileCandidate } = await import('@/lib/storage/profile-candidates');
+      await updateProfileCandidate(id, resumePath, candidateId, value, label);
+      return { ok: true };
+    }
+    case 'DELETE_PROFILE_CANDIDATE': {
+      const { resumePath, candidateId } = (message as unknown) as {
+        resumePath: 'basic.phone' | 'basic.email';
+        candidateId: string;
+      };
+      const id = await getActiveResumeId();
+      if (!id) return { ok: false, error: 'no active resume' };
+      const { deleteProfileCandidate } = await import('@/lib/storage/profile-candidates');
+      await deleteProfileCandidate(id, resumePath, candidateId);
+      return { ok: true };
+    }
+    case 'SET_PROFILE_DOMAIN_PREF': {
+      const { resumePath, domain, candidateId } = (message as unknown) as {
+        resumePath: 'basic.phone' | 'basic.email';
+        domain: string;
+        candidateId: string;
+      };
+      const id = await getActiveResumeId();
+      if (!id) return { ok: false, error: 'no active resume' };
+      const { setProfileDomainPref } = await import('@/lib/storage/profile-domain-prefs-store');
+      await setProfileDomainPref(id, resumePath, domain, candidateId);
+      return { ok: true };
+    }
+    case 'CLEAR_PROFILE_DOMAIN_PREF': {
+      const { resumePath, domain } = (message as unknown) as {
+        resumePath: 'basic.phone' | 'basic.email';
+        domain: string;
+      };
+      const id = await getActiveResumeId();
+      if (!id) return { ok: false, error: 'no active resume' };
+      const { clearProfileDomainPref } = await import('@/lib/storage/profile-domain-prefs-store');
+      await clearProfileDomainPref(id, resumePath, domain);
+      return { ok: true };
+    }
+    case 'LIST_PROFILE_DOMAIN_PREFS': {
+      const id = await getActiveResumeId();
+      if (!id) return { ok: true, data: {} };
+      const { listForResume } = await import('@/lib/storage/profile-domain-prefs-store');
+      return { ok: true, data: await listForResume(id) };
     }
 
     default:
