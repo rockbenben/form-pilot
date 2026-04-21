@@ -3,6 +3,7 @@ import {
   WEAK_CANDIDATE_AGE_MS,
   WEAK_CANDIDATE_HIT_THRESHOLD,
 } from '@/lib/capture/constants';
+import { clearPrefsPointingToCandidate, clearDomainPrefsForSignature } from './domain-prefs-store';
 
 const KEY = 'formpilot:formEntries';
 
@@ -176,6 +177,7 @@ export async function deleteFormEntry(signature: string): Promise<void> {
   if (signature in all) {
     delete all[signature];
     await writeAll(all);
+    await clearDomainPrefsForSignature(signature);
   }
 }
 
@@ -205,10 +207,13 @@ export async function deleteCandidate(
   entry.candidates = entry.candidates.filter((c) => c.id !== candidateId);
   if (entry.candidates.length === 0) {
     delete all[signature];
-  } else if (entry.pinnedId === candidateId) {
-    entry.pinnedId = null;
+    await writeAll(all);
+    await clearDomainPrefsForSignature(signature);
+    return;
   }
+  if (entry.pinnedId === candidateId) entry.pinnedId = null;
   await writeAll(all);
+  await clearPrefsPointingToCandidate(signature, candidateId);
 }
 
 export async function addCandidate(

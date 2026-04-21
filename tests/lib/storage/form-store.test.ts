@@ -10,6 +10,7 @@ import { setFormPin, deleteCandidate } from '@/lib/storage/form-store';
 import { addCandidate, updateCandidate } from '@/lib/storage/form-store';
 import { WEAK_CANDIDATE_AGE_MS } from '@/lib/capture/constants';
 import type { CapturedField } from '@/lib/capture/types';
+import { setDomainPref, listFieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
 
 const mk = (
   sig: string,
@@ -323,5 +324,34 @@ describe('form-store · manual add / update', () => {
     const after = await getFormEntry('email');
     expect(after!.candidates[0].id).toBe(oldId);
     expect(after!.candidates[0].value).toBe('b@y.com');
+  });
+});
+
+describe('form-store · cascade cleanup on candidate delete', () => {
+  beforeEach(async () => {
+    await clearAllFormEntries();
+    await chrome.storage.local.set({ 'formpilot:fieldDomainPrefs': {} });
+  });
+
+  it('removes matching domain prefs when a candidate is deleted', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    await saveFormEntries([mk('email', 'b@y.com', 'text')], 'https://b.com/');
+    const entry = await getFormEntry('email');
+    const bCand = entry!.candidates.find((c) => c.value === 'b@y.com')!;
+    const aCand = entry!.candidates.find((c) => c.value === 'a@x.com')!;
+    await setDomainPref('email', 'workday.com', bCand.id);
+    await setDomainPref('email', 'lagou.com', aCand.id);
+
+    await deleteCandidate('email', bCand.id);
+    const prefs = await listFieldDomainPrefs();
+    expect(prefs['email']).toEqual({ 'lagou.com': aCand.id });
+  });
+
+  it('removes all domain prefs when the entry is deleted wholesale', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    const entry = await getFormEntry('email');
+    await setDomainPref('email', 'workday.com', entry!.candidates[0].id);
+    await deleteFormEntry('email');
+    expect((await listFieldDomainPrefs())['email']).toBeUndefined();
   });
 });
