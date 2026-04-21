@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { DraftSnapshot, PageMemoryEntry, CapturedField } from '@/lib/capture/types';
-import type { FormEntry } from '@/lib/storage/form-store';
+import type { FormEntry, FieldCandidate } from '@/lib/storage/form-store';
+import type { FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
 import { useI18n } from '@/lib/i18n';
 import { formatRelativeTime } from '@/lib/capture/time-format';
 import { MULTI_VALUE_SEPARATOR } from '@/lib/capture/element-value';
@@ -38,23 +39,39 @@ function FieldTable({ rows }: { rows: Array<{ label: string; value: string }> })
   );
 }
 
+function pickDefault(entry: FormEntry): FieldCandidate | null {
+  if (entry.candidates.length === 0) return null;
+  if (entry.pinnedId) {
+    const pinned = entry.candidates.find((c) => c.id === entry.pinnedId);
+    if (pinned) return pinned;
+  }
+  return [...entry.candidates].sort((a, b) => {
+    if (b.hitCount !== a.hitCount) return b.hitCount - a.hitCount;
+    if (b.updatedAt !== a.updatedAt) return b.updatedAt - a.updatedAt;
+    return a.createdAt - b.createdAt;
+  })[0];
+}
+
 export default function SavedPagesSection() {
   const { t } = useI18n();
   const [tab, setTab] = useState<SubTab>('drafts');
   const [drafts, setDrafts] = useState<DraftSnapshot[]>([]);
   const [memory, setMemory] = useState<Record<string, PageMemoryEntry[]>>({});
   const [formEntries, setFormEntries] = useState<Record<string, FormEntry>>({});
+  const [domainPrefs, setDomainPrefs] = useState<FieldDomainPrefs>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const refresh = useCallback(async () => {
-    const [d, m, f] = await Promise.all([
+    const [d, m, f, dp] = await Promise.all([
       chrome.runtime.sendMessage({ type: 'LIST_DRAFTS' }),
       chrome.runtime.sendMessage({ type: 'LIST_PAGE_MEMORY' }),
       chrome.runtime.sendMessage({ type: 'LIST_FORM_ENTRIES' }),
+      chrome.runtime.sendMessage({ type: 'LIST_DOMAIN_PREFS' }),
     ]);
     setDrafts(d?.ok ? (d.data as DraftSnapshot[]) : []);
     setMemory(m?.ok ? (m.data as Record<string, PageMemoryEntry[]>) : {});
     setFormEntries(f?.ok ? (f.data as Record<string, FormEntry>) : {});
+    setDomainPrefs(dp?.ok ? (dp.data as FieldDomainPrefs) : {});
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -75,10 +92,6 @@ export default function SavedPagesSection() {
     await chrome.runtime.sendMessage({ type: 'DELETE_PAGE_MEMORY', url });
     refresh();
   };
-  const deleteFormEntry = async (signature: string) => {
-    await chrome.runtime.sendMessage({ type: 'DELETE_FORM_ENTRY', signature });
-    refresh();
-  };
   const clearAllFormEntries = async () => {
     await chrome.runtime.sendMessage({ type: 'CLEAR_FORM_ENTRIES' });
     refresh();
@@ -92,10 +105,10 @@ export default function SavedPagesSection() {
   const memoryRows = (entries: PageMemoryEntry[]) =>
     entries.map((e) => ({ label: e.signature, value: e.value }));
 
-  // Sort form entries by hitCount desc, then updatedAt desc
   const sortedFormEntries = Object.values(formEntries).sort((a, b) => {
-    if (b.hitCount !== a.hitCount) return b.hitCount - a.hitCount;
-    return b.updatedAt - a.updatedAt;
+    const ad = pickDefault(a), bd = pickDefault(b);
+    if ((bd?.hitCount ?? 0) !== (ad?.hitCount ?? 0)) return (bd?.hitCount ?? 0) - (ad?.hitCount ?? 0);
+    return (bd?.updatedAt ?? 0) - (ad?.updatedAt ?? 0);
   });
 
   return (
@@ -238,43 +251,220 @@ export default function SavedPagesSection() {
                 {t('savedPages.form.clearAll')}
               </button>
             </div>
-            <table className="w-full">
-              <thead className="text-xs text-gray-500">
-                <tr>
-                  <th className="text-left p-1">{t('savedPages.form.column.label')}</th>
-                  <th className="text-left p-1">{t('savedPages.form.column.value')}</th>
-                  <th className="text-left p-1">{t('savedPages.form.column.hits')}</th>
-                  <th className="text-left p-1">{t('savedPages.form.column.source')}</th>
-                  <th className="text-left p-1">{t('savedPages.column.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedFormEntries.map((e) => (
-                  <tr key={e.signature} className="border-t border-gray-800">
-                    <td className="p-1 truncate max-w-[160px]" title={e.label}>
-                      {e.label || '—'}
-                    </td>
-                    <td className="p-1 truncate max-w-[200px]" title={displayValue(e.displayValue || e.value)}>
-                      {truncate(displayValue(e.displayValue || e.value), 60)}
-                    </td>
-                    <td className="p-1 text-xs text-gray-500">{e.hitCount}</td>
-                    <td className="p-1 text-xs text-gray-500 truncate max-w-[200px]" title={e.lastUrl}>
-                      {e.lastUrl}
-                    </td>
-                    <td className="p-1">
-                      <button
-                        onClick={() => deleteFormEntry(e.signature)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        {t('savedPages.action.delete')}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="space-y-2">
+              {sortedFormEntries.map((e) => {
+                const key = `form:${e.signature}`;
+                const isOpen = expanded.has(key);
+                const def = pickDefault(e);
+                const defText = def ? displayValue(def.displayValue ?? def.value) : '—';
+                const domains = domainPrefs[e.signature] ?? {};
+                return (
+                  <div key={e.signature} className="border border-gray-800 rounded">
+                    <button
+                      className="w-full text-left p-2 flex items-center justify-between hover:bg-gray-800/40"
+                      onClick={() => toggleExpand(key)}
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium truncate" title={e.label}>{e.label || '—'}</div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {t('candidate.dashboard.defaultLabel', { value: truncate(defText, 60) })}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 shrink-0">
+                        <span>{t('candidate.dashboard.candidatesCount', { n: String(e.candidates.length) })}</span>
+                        {e.pinnedId && <span title={t('candidate.picker.pin')}>★</span>}
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <FormEntryPanel
+                        entry={e}
+                        domains={domains}
+                        onChanged={refresh}
+                        now={now}
+                        t={t}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </>
         )
+      )}
+    </div>
+  );
+}
+
+function FormEntryPanel({
+  entry, domains, onChanged, now, t,
+}: {
+  entry: FormEntry;
+  domains: Record<string, string>;
+  onChanged: () => void;
+  now: number;
+  t: (key: string, vars?: Record<string, string>) => string;
+}) {
+  const [adding, setAdding] = React.useState(false);
+  const [addValue, setAddValue] = React.useState('');
+  const [addDisplayValue, setAddDisplayValue] = React.useState('');
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editValue, setEditValue] = React.useState('');
+  const [editDisplayValue, setEditDisplayValue] = React.useState('');
+  const needsDisplay = entry.kind === 'radio' || entry.kind === 'select';
+
+  const deleteCandidate = async (candidateId: string) => {
+    await chrome.runtime.sendMessage({ type: 'DELETE_FORM_CANDIDATE', signature: entry.signature, candidateId });
+    onChanged();
+  };
+  const togglePin = async (candidateId: string) => {
+    const next = entry.pinnedId === candidateId ? null : candidateId;
+    await chrome.runtime.sendMessage({ type: 'SET_FORM_PIN', signature: entry.signature, candidateId: next });
+    onChanged();
+  };
+  const submitAdd = async () => {
+    if (!addValue && !addDisplayValue) return;
+    await chrome.runtime.sendMessage({
+      type: 'ADD_FORM_CANDIDATE',
+      signature: entry.signature,
+      value: addValue,
+      displayValue: needsDisplay ? addDisplayValue : undefined,
+    });
+    setAdding(false); setAddValue(''); setAddDisplayValue('');
+    onChanged();
+  };
+  const beginEdit = (c: FieldCandidate) => {
+    setEditingId(c.id);
+    setEditValue(c.value);
+    setEditDisplayValue(c.displayValue ?? '');
+  };
+  const submitEdit = async (candidateId: string) => {
+    await chrome.runtime.sendMessage({
+      type: 'UPDATE_FORM_CANDIDATE',
+      signature: entry.signature,
+      candidateId,
+      value: editValue,
+      displayValue: needsDisplay ? editDisplayValue : undefined,
+    });
+    setEditingId(null);
+    onChanged();
+  };
+  const clearDomainOverride = async (domain: string) => {
+    await chrome.runtime.sendMessage({ type: 'CLEAR_DOMAIN_PREF', signature: entry.signature, domain });
+    onChanged();
+  };
+
+  return (
+    <div className="border-t border-gray-800 p-2 space-y-3">
+      <div className="space-y-1">
+        {entry.candidates.map((c) => {
+          const editing = editingId === c.id;
+          return (
+            <div key={c.id} className="flex items-start gap-2 text-xs py-1">
+              <div className="flex-1 min-w-0">
+                {editing ? (
+                  <div className="space-y-1">
+                    <input
+                      className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1"
+                      value={editValue} onChange={(ev) => setEditValue(ev.target.value)}
+                      placeholder={t('candidate.dashboard.valuePlaceholder')}
+                    />
+                    {needsDisplay && (
+                      <input
+                        className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1"
+                        value={editDisplayValue} onChange={(ev) => setEditDisplayValue(ev.target.value)}
+                        placeholder={t('candidate.dashboard.displayValuePlaceholder')}
+                      />
+                    )}
+                    <div className="flex gap-2">
+                      <button className="text-blue-400" onClick={() => submitEdit(c.id)}>
+                        {t('candidate.dashboard.save')}
+                      </button>
+                      <button className="text-gray-400" onClick={() => setEditingId(null)}>
+                        {t('candidate.dashboard.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-gray-200 break-all">
+                      {c.displayValue ?? c.value}
+                    </div>
+                    <div className="text-gray-500">
+                      {t('candidate.picker.lastSeen', { domain: c.lastUrl || '—' })} ·{' '}
+                      {t('candidate.picker.hitCountLabel', { n: String(c.hitCount) })} ·{' '}
+                      {formatRelativeTime(c.updatedAt, now, t)}
+                    </div>
+                  </>
+                )}
+              </div>
+              {!editing && (
+                <div className="flex gap-2 shrink-0 text-gray-400">
+                  <button title={t('candidate.dashboard.editValue')} onClick={() => beginEdit(c)}>✎</button>
+                  <button
+                    title={entry.pinnedId === c.id ? t('candidate.picker.unpin') : t('candidate.picker.pin')}
+                    onClick={() => togglePin(c.id)}
+                  >
+                    {entry.pinnedId === c.id ? '★' : '☆'}
+                  </button>
+                  <button
+                    title={t('candidate.picker.delete')}
+                    onClick={() => deleteCandidate(c.id)}
+                    className="text-red-400 hover:text-red-300"
+                  >🗑</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {adding ? (
+        <div className="space-y-1">
+          <input
+            className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs"
+            value={addValue} onChange={(ev) => setAddValue(ev.target.value)}
+            placeholder={t('candidate.dashboard.valuePlaceholder')}
+          />
+          {needsDisplay && (
+            <input
+              className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs"
+              value={addDisplayValue} onChange={(ev) => setAddDisplayValue(ev.target.value)}
+              placeholder={t('candidate.dashboard.displayValuePlaceholder')}
+            />
+          )}
+          <div className="flex gap-2 text-xs">
+            <button className="text-blue-400" onClick={submitAdd}>{t('candidate.dashboard.save')}</button>
+            <button className="text-gray-400" onClick={() => setAdding(false)}>{t('candidate.dashboard.cancel')}</button>
+          </div>
+        </div>
+      ) : (
+        <button className="text-xs text-blue-400 hover:text-blue-300" onClick={() => setAdding(true)}>
+          + {t('candidate.dashboard.addCandidate')}
+        </button>
+      )}
+
+      {Object.keys(domains).length > 0 && (
+        <div className="pt-2 border-t border-gray-800">
+          <div className="text-xs text-gray-500 mb-1">
+            {t('candidate.dashboard.domainOverrides')}
+          </div>
+          <div className="space-y-1">
+            {Object.entries(domains).map(([domain, candidateId]) => {
+              const cand = entry.candidates.find((c) => c.id === candidateId);
+              return (
+                <div key={domain} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-300">
+                    {domain} → {cand ? (cand.displayValue ?? cand.value) : '(missing)'}
+                  </span>
+                  <button
+                    className="text-red-400 hover:text-red-300"
+                    onClick={() => clearDomainOverride(domain)}
+                  >🗑</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
