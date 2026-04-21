@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "扩展名，显示在 chrome://extensions 和 Chrome Web Store。"
+  },
+  "extensionDescription": {
+    "message": "一键投简历，跨站复填，答过的问题不再重复。适配 Moka、Workday、BOSS、拉勾、智联、Greenhouse 等主流招聘站。",
+    "description": "扩展描述，显示在 chrome://extensions 和 Chrome Web Store。"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "Extension name shown in chrome://extensions and Chrome Web Store."
+  },
+  "extensionDescription": {
+    "message": "One-click resume autofill — remembers every answer across Moka, Workday, BOSS, Greenhouse and more.",
+    "description": "Extension description shown in chrome://extensions and Chrome Web Store."
+  }
+}
