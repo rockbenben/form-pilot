@@ -210,3 +210,36 @@ export async function deleteCandidate(
   }
   await writeAll(all);
 }
+
+export async function addCandidate(
+  signature: string,
+  value: string,
+  displayValue: string | undefined,
+): Promise<string | null> {
+  const all = await readAll();
+  const entry = all[signature];
+  if (!entry) return null;
+  if (entry.candidates.some((c) => candidateMatches(c, value, displayValue))) return null;
+  const now = Date.now();
+  const c = newCandidate(value, displayValue, '(manual)', now, 0);
+  entry.candidates.push(c);
+  await writeAll(all);
+  return c.id;
+}
+
+export async function updateCandidate(
+  signature: string,
+  candidateId: string,
+  value: string,
+  displayValue: string | undefined,
+): Promise<void> {
+  const all = await readAll();
+  const entry = all[signature];
+  if (!entry) return;
+  const c = entry.candidates.find((c) => c.id === candidateId);
+  if (!c) return;
+  c.value = value;
+  c.displayValue = displayValue;
+  c.updatedAt = Date.now();
+  await writeAll(all);
+}

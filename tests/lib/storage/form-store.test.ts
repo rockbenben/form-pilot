@@ -7,6 +7,7 @@ import {
   deleteFormEntry,
 } from '@/lib/storage/form-store';
 import { setFormPin, deleteCandidate } from '@/lib/storage/form-store';
+import { addCandidate, updateCandidate } from '@/lib/storage/form-store';
 import { WEAK_CANDIDATE_AGE_MS } from '@/lib/capture/constants';
 import type { CapturedField } from '@/lib/capture/types';
 
@@ -284,5 +285,43 @@ describe('form-store · deleteCandidate', () => {
     const entry = await getFormEntry('email');
     await deleteCandidate('email', entry!.candidates[0].id);
     expect(await getFormEntry('email')).toBeNull();
+  });
+});
+
+describe('form-store · manual add / update', () => {
+  beforeEach(async () => { await clearAllFormEntries(); });
+
+  it('addCandidate appends a new candidate with hitCount 0', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    const id = await addCandidate('email', 'manual@z.com', undefined);
+    expect(id).not.toBeNull();
+    const entry = await getFormEntry('email');
+    const c = entry!.candidates.find((c) => c.id === id)!;
+    expect(c.value).toBe('manual@z.com');
+    expect(c.hitCount).toBe(0);
+    expect(c.lastUrl).toBe('(manual)');
+  });
+
+  it('addCandidate is a no-op for unknown signature', async () => {
+    const id = await addCandidate('missing', 'x', undefined);
+    expect(id).toBeNull();
+  });
+
+  it('addCandidate rejects a duplicate (value, displayValue)', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    const id = await addCandidate('email', 'a@x.com', undefined);
+    expect(id).toBeNull();
+    const entry = await getFormEntry('email');
+    expect(entry!.candidates).toHaveLength(1);
+  });
+
+  it('updateCandidate changes value but keeps the id', async () => {
+    await saveFormEntries([mk('email', 'a@x.com', 'text')], 'https://a.com/');
+    const entry = await getFormEntry('email');
+    const oldId = entry!.candidates[0].id;
+    await updateCandidate('email', oldId, 'b@y.com', undefined);
+    const after = await getFormEntry('email');
+    expect(after!.candidates[0].id).toBe(oldId);
+    expect(after!.candidates[0].value).toBe('b@y.com');
   });
 });
