@@ -105,6 +105,7 @@ pnpm run build        # 生产构建
 | **保存到资料**（页面值 → 活动资料，一键全量） | ✅ |
 | **本页记忆**（Phase 3 兜底，紫色高亮） | ✅ |
 | **多值表单记录**（Phase 4；同一字段的历史答案全部保留；可 pin / 按域名覆盖；页面内 ▾ 选择器） | Done |
+| **Profile 多值**（`basic.phone` / `basic.email` 多候选；可 pin / 按域名覆盖（按简历分）；页面内 ▾ 选择器） | Done |
 | **隐藏 input 代理点击**（jqradio / iCheck / display:none） | ✅ |
 | **题组 label 识别**（问卷星、Select2、fieldset/legend） | ✅ |
 | **域名白名单**（Settings 管理的自动激活范围） | ✅ |
@@ -165,6 +166,7 @@ pnpm run build        # 生产构建
 │  formpilot:pageMemory      按 URL × (签名, index)        │
 │  formpilot:formEntries     跨 URL 候选列表 per signature │
 │  formpilot:fieldDomainPrefs 按 signature 的 domain 覆盖  │
+│  formpilot:profileDomainPrefs 每份简历的 Profile 字段域名覆盖记录  │
 │  chrome.storage.session    仅 API Key                    │
 └──────────────────────────────────────────────────────────┘
 

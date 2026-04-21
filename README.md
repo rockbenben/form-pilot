@@ -105,6 +105,7 @@ pnpm run build        # Production build
 | **Save to profile** (page values → active profile, one click) | Done |
 | **Per-URL page memory** (Phase 3 fallback, purple highlight) | Done |
 | **Multi-value form entries** (Phase 4; keep every past answer per signature; pin / per-domain override; in-page ▾ picker) | Done |
+| **Profile multi-value** (`basic.phone` / `basic.email` keep multiple candidates; pin / per-resume domain override; in-page ▾ picker on profile-filled fields) | Done |
 | **Widget proxy click-through** (jqradio / iCheck / display:none inputs) | Done |
 | **Group-heading label detection** (wjx, Select2, fieldset/legend) | Done |
 | **Opt-in domain list** (Settings-managed auto-activation) | Done |
@@ -165,6 +166,7 @@ pnpm run build        # Production build
 │  formpilot:pageMemory      Per-URL (signature, index)   │
 │  formpilot:formEntries     Cross-URL: candidates[] per s│
 │  formpilot:fieldDomainPrefs Per-sig domain overrides    │
+│  formpilot:profileDomainPrefs Per-resume profile-field domain overrides │
 │  chrome.storage.session    API key only                 │
 └─────────────────────────────────────────────────────────┘
 
