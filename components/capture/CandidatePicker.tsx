@@ -1,5 +1,5 @@
 // components/capture/CandidatePicker.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { FieldCandidate } from '@/lib/storage/form-store';
 
 export interface CandidatePickerProps {
@@ -18,9 +18,29 @@ export function CandidatePicker({
   onSelect, onPinToggle, onDelete, onManageAll,
 }: CandidatePickerProps) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      const path = e.composedPath();
+      if (rootRef.current && !path.includes(rootRef.current)) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onMouseDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onMouseDown, true);
+    };
+  }, [open]);
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={rootRef} style={{ position: 'relative', display: 'inline-block' }}>
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}

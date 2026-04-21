@@ -145,10 +145,6 @@ export default defineContentScript({
         }
 
         // Mount a ▾ picker beside every multi-candidate Phase 4 field.
-        const storedLocale = await chrome.storage.local.get('formpilot:locale');
-        const pickerLocale = (storedLocale['formpilot:locale'] === 'en') ? 'en' : 'zh';
-        const pickerT = makeT(pickerLocale);
-
         for (const it of result.items) {
           if (it.source !== 'form') continue;
           if (!it.element) continue;
@@ -163,7 +159,7 @@ export default defineContentScript({
           const picker = mountCandidatePicker({
             target: it.element,
             signature: sig,
-            t: pickerT,
+            t,
             candidates: entry.candidates,
             pinnedId: entry.pinnedId,
             currentCandidateId,
