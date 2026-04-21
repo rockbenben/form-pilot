@@ -6,6 +6,7 @@ import { runMemoryPhase } from '@/lib/capture/memory-phase';
 import { runFormPhase } from '@/lib/capture/form-phase';
 import type { PageMemoryEntry } from '@/lib/capture/types';
 import type { FormEntry } from '@/lib/storage/form-store';
+import type { FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
 
 // ─── Resume Path Resolver ─────────────────────────────────────────────────────
 
@@ -57,6 +58,8 @@ export async function orchestrateFill(
   adapter: PlatformAdapter | null,
   memoryEntries: PageMemoryEntry[] = [],
   formEntries: Record<string, FormEntry> = {},
+  domainPrefs: FieldDomainPrefs = {},
+  currentDomain: string = '',
 ): Promise<FillResult> {
   const scanned = await scanFields(doc, adapter);
   const items: FillResultItem[] = [];
@@ -120,11 +123,13 @@ export async function orchestrateFill(
     }
   }
 
-  // Phase 4 — cross-URL form entries. Last-resort for any remaining
-  // unrecognized fields that the user has filled before on some other site
-  // with the same visible label.
+  // Phase 4 — cross-URL form entries.
+  let formHits: Array<{ signature: string; candidateId: string }> | undefined;
   if (Object.keys(formEntries).length > 0) {
-    const formFilled = await runFormPhase(doc, scanned, formEntries);
+    const { filled: formFilled, hits } = await runFormPhase(
+      doc, scanned, formEntries, domainPrefs, currentDomain,
+    );
+    if (hits.length > 0) formHits = hits;
     if (formFilled > 0) {
       const byElement = new Map(items.map((it) => [it.element, it] as const));
       for (const s of scanned) {
@@ -142,5 +147,5 @@ export async function orchestrateFill(
   const filled = items.filter((i) => i.status === 'filled').length;
   const uncertain = items.filter((i) => i.status === 'uncertain').length;
   const unrecognized = items.filter((i) => i.status === 'unrecognized').length;
-  return { items, filled, uncertain, unrecognized };
+  return { items, filled, uncertain, unrecognized, formHits };
 }

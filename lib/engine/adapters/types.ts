@@ -34,6 +34,8 @@ export interface FillResult {
   filled: number;
   uncertain: number;
   unrecognized: number;
+  /** Phase 4 candidate selections. Present only when Phase 4 produced fills. */
+  formHits?: Array<{ signature: string; candidateId: string }>;
 }
 
 export interface StepInfo {

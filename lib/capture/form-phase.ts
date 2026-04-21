@@ -1,33 +1,42 @@
-import type { FormEntry } from '@/lib/storage/form-store';
+import type { FormEntriesMap } from '@/lib/storage/form-store';
 import type { ScannedItem } from '@/lib/engine/scanner';
 import type { InputType } from '@/lib/engine/adapters/types';
+import type { FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
+import { resolveCandidate } from '@/lib/storage/form-store';
 import { computeSignatureFor } from './signature';
 import { detectElementKind } from './element-value';
 import { fillElement } from '@/lib/engine/heuristic/fillers';
 
+export interface FormPhaseFill {
+  signature: string;
+  candidateId: string;
+}
+
+export interface FormPhaseResult {
+  filled: number;
+  hits: FormPhaseFill[];
+}
+
 /**
- * Phase 4 — cross-URL form entries. After adapter, heuristic+resume, and
- * per-URL page memory have all passed, any still-unrecognized field whose
- * signature appears in the cross-URL form store gets filled with the
- * remembered display value.
+ * Phase 4 — cross-URL form entries.
  *
- * Mutates matched ScannedItems: status → 'recognized', source → 'form'.
- * Returns the count filled.
+ * For each unrecognized scanned item, resolves a candidate via
+ * `resolveCandidate(entry, currentDomain, domainPrefs[sig])` and fills it.
+ * Emits (signature, candidateId) pairs so the caller can bump hitCount.
  */
 export async function runFormPhase(
   doc: Document,
   items: ScannedItem[],
-  entries: Record<string, FormEntry>,
-): Promise<number> {
-  const signatures = Object.keys(entries);
-  if (signatures.length === 0) return 0;
+  entries: FormEntriesMap,
+  domainPrefs: FieldDomainPrefs,
+  currentDomain: string,
+): Promise<FormPhaseResult> {
+  const hits: FormPhaseFill[] = [];
+  if (Object.keys(entries).length === 0) return { filled: 0, hits };
 
-  // A radio group is exposed as N scanned items (one per DOM input) but
-  // logically represents one field — dedupe by `name` so the same group
-  // isn't re-filled per-member.
   const radioGroupsDone = new Set<string>();
-
   let filled = 0;
+
   for (const it of items) {
     if (it.status !== 'unrecognized') continue;
     if ((it.element as HTMLElement).getAttribute?.('data-formpilot-restored') === 'draft') continue;
@@ -42,9 +51,12 @@ export async function runFormPhase(
     const entry = entries[sig];
     if (!entry) continue;
 
-    const fillValue = entry.displayValue && entry.displayValue.length > 0
-      ? entry.displayValue
-      : entry.value;
+    const candidate = resolveCandidate(entry, currentDomain, domainPrefs[sig] ?? {});
+    if (!candidate) continue;
+
+    const fillValue = candidate.displayValue && candidate.displayValue.length > 0
+      ? candidate.displayValue
+      : candidate.value;
     if (!fillValue) continue;
 
     const inputType: InputType = kind ?? entry.kind;
@@ -55,6 +67,7 @@ export async function runFormPhase(
         it.source = 'form';
         it.resumePath = '(form)';
         filled++;
+        hits.push({ signature: sig, candidateId: candidate.id });
         if (kind === 'radio') {
           const name = (it.element as HTMLInputElement).getAttribute('name') ?? '';
           if (name) radioGroupsDone.add(name);
@@ -62,5 +75,5 @@ export async function runFormPhase(
       }
     } catch { /* ignore */ }
   }
-  return filled;
+  return { filled, hits };
 }
