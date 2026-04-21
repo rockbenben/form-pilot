@@ -6,6 +6,21 @@ afterEach(() => {
 });
 
 describe('fillElement', () => {
+  it('fills contenteditable element via textContent + input/change', async () => {
+    const div = document.createElement('div');
+    div.setAttribute('contenteditable', 'true');
+    document.body.appendChild(div);
+
+    const events: string[] = [];
+    div.addEventListener('input', () => events.push('input'));
+    div.addEventListener('change', () => events.push('change'));
+
+    const ok = await fillElement(div, 'hello rich text', 'contenteditable');
+    expect(ok).toBe(true);
+    expect(div.textContent).toBe('hello rich text');
+    expect(events).toContain('input');
+  });
+
   it('fills text input and dispatches events', async () => {
     const input = document.createElement('input');
     input.type = 'text';

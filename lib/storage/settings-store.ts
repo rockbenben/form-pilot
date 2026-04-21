@@ -17,7 +17,11 @@ export async function getSettings(): Promise<Settings> {
   ]);
   const base = (localResult[SETTINGS_KEY] as Partial<Settings> | undefined) ?? {};
   const apiKey = (sessionResult as Record<string, string>)[API_KEY_KEY] ?? '';
-  return { ...DEFAULT_SETTINGS, ...base, apiKey };
+  const merged: Settings = { ...DEFAULT_SETTINGS, ...base, apiKey };
+  // Always hand callers a fresh array so ad-hoc mutations on
+  // settings.allowedDomains never touch the DEFAULT export or the
+  // in-memory stored snapshot.
+  return { ...merged, allowedDomains: [...merged.allowedDomains] };
 }
 
 /**

@@ -9,6 +9,7 @@ export type SectionId =
   | 'skills'
   | 'jobPreference'
   | 'custom'
+  | 'savedPages'
   | 'settings';
 
 interface SidebarProps {
@@ -29,6 +30,7 @@ export default function Sidebar({ active, onChange, className }: SidebarProps) {
     { id: 'skills' as SectionId, label: t('nav.skills') },
     { id: 'jobPreference' as SectionId, label: t('nav.jobPreference') },
     { id: 'custom' as SectionId, label: t('nav.custom') },
+    { id: 'savedPages' as SectionId, label: t('nav.savedPages') },
   ];
 
   return (

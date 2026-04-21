@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  createResume, getResume, listResumes, updateResume, deleteResume,
+  createResume, getResume, listResumes, updateResume, deleteResume, renameResume,
   getActiveResumeId, setActiveResumeId,
 } from '@/lib/storage/resume-store';
 
@@ -60,5 +60,31 @@ describe('resume-store', () => {
     expect(await getActiveResumeId()).toBe(r1.meta.id);
     await setActiveResumeId(r2.meta.id);
     expect(await getActiveResumeId()).toBe(r2.meta.id);
+  });
+
+  it('renames a resume and bumps updatedAt', async () => {
+    const created = await createResume('旧名字');
+    await new Promise((r) => setTimeout(r, 5));
+    const renamed = await renameResume(created.meta.id, '新名字');
+    expect(renamed.meta.name).toBe('新名字');
+    expect(renamed.meta.updatedAt).toBeGreaterThan(created.meta.updatedAt);
+    // Other fields untouched
+    expect(renamed.basic).toEqual(created.basic);
+  });
+
+  it('rename trims whitespace', async () => {
+    const created = await createResume('x');
+    const renamed = await renameResume(created.meta.id, '  My Profile  ');
+    expect(renamed.meta.name).toBe('My Profile');
+  });
+
+  it('rename rejects empty/whitespace names', async () => {
+    const created = await createResume('x');
+    await expect(renameResume(created.meta.id, '   ')).rejects.toThrow();
+    await expect(renameResume(created.meta.id, '')).rejects.toThrow();
+  });
+
+  it('rename throws when id not found', async () => {
+    await expect(renameResume('nope', 'x')).rejects.toThrow();
   });
 });

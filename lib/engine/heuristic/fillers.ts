@@ -1,22 +1,7 @@
 import type { InputType } from '@/lib/engine/adapters/types';
-
-/**
- * Use the React/Vue-compatible native input setter to change a value,
- * so that framework-controlled inputs detect the change.
- */
-function nativeSet(el: HTMLInputElement | HTMLTextAreaElement, value: string): void {
-  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-    el.tagName.toLowerCase() === 'textarea'
-      ? HTMLTextAreaElement.prototype
-      : HTMLInputElement.prototype,
-    'value'
-  );
-  if (nativeInputValueSetter?.set) {
-    nativeInputValueSetter.set.call(el, value);
-  } else {
-    el.value = value;
-  }
-}
+import { cssEscape } from '@/lib/capture/css-escape';
+import { setNativeValue, setNativeChecked } from '@/lib/capture/native-set';
+import { isVisuallyHidden, findVisualProxy } from '@/lib/capture/widget-proxy';
 
 /**
  * Dispatch a sequence of DOM events on an element to simulate user interaction.
@@ -41,7 +26,7 @@ async function fillText(
   value: string
 ): Promise<boolean> {
   if (el.readOnly || el.disabled) return false;
-  nativeSet(el, value);
+  setNativeValue(el, value);
   dispatchEvents(el, ['focus', 'input', 'change', 'blur']);
   return el.value === value;
 }
@@ -81,22 +66,11 @@ async function fillSelect(el: HTMLSelectElement, value: string): Promise<boolean
 
   if (!matched) return false;
 
-  el.value = matched.value;
-  dispatchEvents(el, ['focus', 'change', 'blur']);
+  setNativeValue(el, matched.value);
+  dispatchEvents(el, ['focus', 'input', 'change', 'blur']);
   return true;
 }
 
-/**
- * Escape a string for use in a CSS attribute selector.
- * Falls back to CSS.escape if available, otherwise uses a simple replacement.
- */
-function cssEscapeAttr(value: string): string {
-  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
-    return CSS.escape(value);
-  }
-  // Minimal fallback: escape quotes and backslashes
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
 
 /**
  * Fill a radio button by matching label text or value.
@@ -113,7 +87,7 @@ async function fillRadio(el: HTMLInputElement, value: string): Promise<boolean> 
     if (!root) return false;
     allRadios = Array.from(
       root.querySelectorAll<HTMLInputElement>(
-        `input[type="radio"][name="${cssEscapeAttr(name)}"]`,
+        `input[type="radio"][name="${cssEscape(name)}"]`,
       ),
     );
   } else {
@@ -133,29 +107,47 @@ async function fillRadio(el: HTMLInputElement, value: string): Promise<boolean> 
     (r) => r.value.toLowerCase() === lowerValue
   );
 
-  // Try to match by label text (via label[for=id], wrapping label, or adjacent text)
+  // Try to match by label text. Survey frameworks (问卷星, etc.) use non-
+  // `<label>` elements with `for=id` (e.g. `<div class="label" for="x">男</div>`),
+  // so we widen to any element carrying the `for` attribute.
   if (!target) {
     target = allRadios.find((r) => {
       const id = r.getAttribute('id');
       if (id) {
-        const label = r.ownerDocument.querySelector(`label[for="${id}"]`);
-        if (label?.textContent?.trim().toLowerCase().includes(lowerValue)) return true;
+        try {
+          const label = r.ownerDocument.querySelector(`[for="${cssEscape(id)}"]`);
+          if (label?.textContent?.trim().toLowerCase().includes(lowerValue)) return true;
+        } catch { /* fall through */ }
       }
       // Check wrapping label
       const parentLabel = r.closest('label');
       if (parentLabel) {
-        // Get text excluding nested inputs
         const clone = parentLabel.cloneNode(true) as Element;
         clone.querySelectorAll('input').forEach((c) => c.remove());
         const text = clone.textContent?.trim().toLowerCase() ?? '';
         if (text.includes(lowerValue)) return true;
       }
       // Adjacent text nodes / previous siblings
-      let sibling = r.previousSibling;
+      let sibling: Node | null = r.previousSibling;
       while (sibling) {
         const text = sibling.textContent?.trim().toLowerCase() ?? '';
         if (text && text.includes(lowerValue)) return true;
         sibling = sibling.previousSibling;
+      }
+      // Next-sibling text nodes (jqradio pattern: input then `<a>` then `<div>label</div>`)
+      sibling = r.nextSibling;
+      while (sibling) {
+        const text = sibling.textContent?.trim().toLowerCase() ?? '';
+        if (text && text.includes(lowerValue)) return true;
+        sibling = sibling.nextSibling;
+      }
+      // Parent container's descendant text (ui-radio wrapper pattern)
+      const wrapper = r.parentElement?.parentElement;
+      if (wrapper) {
+        const clone = wrapper.cloneNode(true) as Element;
+        clone.querySelectorAll('input, select, textarea').forEach((c) => c.remove());
+        const text = clone.textContent?.trim().toLowerCase() ?? '';
+        if (text.includes(lowerValue)) return true;
       }
       return false;
     });
@@ -163,8 +155,13 @@ async function fillRadio(el: HTMLInputElement, value: string): Promise<boolean> 
 
   if (!target) return false;
 
-  target.checked = true;
-  dispatchEvents(target, ['focus', 'change', 'blur']);
+  setNativeChecked(target, true);
+  dispatchEvents(target, ['focus', 'input', 'change', 'blur']);
+  // Widget libraries that hide the native radio need their proxy clicked.
+  if (isVisuallyHidden(target)) {
+    const proxy = findVisualProxy(target);
+    if (proxy) { try { proxy.click(); } catch { /* ignore */ } }
+  }
   return true;
 }
 
@@ -174,8 +171,13 @@ async function fillRadio(el: HTMLInputElement, value: string): Promise<boolean> 
 async function fillCheckbox(el: HTMLInputElement, value: string): Promise<boolean> {
   const truthy = ['true', 'yes', '是', '1'];
   const shouldCheck = truthy.includes(value.toLowerCase().trim());
-  el.checked = shouldCheck;
-  dispatchEvents(el, ['focus', 'change', 'blur']);
+  const prior = el.checked;
+  setNativeChecked(el, shouldCheck);
+  dispatchEvents(el, ['focus', 'input', 'change', 'blur']);
+  if (isVisuallyHidden(el) && prior !== shouldCheck) {
+    const proxy = findVisualProxy(el);
+    if (proxy) { try { proxy.click(); } catch { /* ignore */ } }
+  }
   return true;
 }
 
@@ -184,9 +186,19 @@ async function fillCheckbox(el: HTMLInputElement, value: string): Promise<boolea
  */
 async function fillDate(el: HTMLInputElement, value: string): Promise<boolean> {
   if (el.readOnly || el.disabled) return false;
-  nativeSet(el, value);
+  setNativeValue(el, value);
   dispatchEvents(el, ['focus', 'input', 'change', 'blur']);
   return el.value === value;
+}
+
+/**
+ * Fill a contenteditable element (rich-text surfaces, custom comment boxes).
+ * Plain-text only — formatting is not preserved across capture/restore.
+ */
+async function fillContenteditable(el: HTMLElement, value: string): Promise<boolean> {
+  el.textContent = value;
+  dispatchEvents(el, ['focus', 'input', 'change', 'blur']);
+  return (el.textContent ?? '') === value;
 }
 
 /**
@@ -266,6 +278,9 @@ export async function fillElement(
 
     case 'custom-select':
       return fillCustomSelect(el, value);
+
+    case 'contenteditable':
+      return fillContenteditable(el as HTMLElement, value);
 
     default:
       return false;

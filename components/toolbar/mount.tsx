@@ -2,6 +2,8 @@ import React, { useState, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import FloatingToolbar from './FloatingToolbar';
 import ResultBubble from './ResultBubble';
+import SaveMenu from '@/components/capture/SaveMenu';
+import ToolbarToast from '@/components/capture/ToolbarToast';
 import type { FillResult } from '@/lib/engine/adapters/types';
 import { makeT } from '@/lib/i18n';
 
@@ -10,17 +12,30 @@ interface ToolbarAppProps {
   initialPosition: { x: number; y: number };
   onPositionSave: (pos: { x: number; y: number }) => void;
   onFill: () => Promise<FillResult>;
-  t: (key: string) => string;
+  onSaveDraft: () => Promise<{ ok: boolean; msg: string }>;
+  onWriteBack: () => Promise<{ ok: boolean; msg: string }>;
+  onSaveMemory: () => Promise<{ ok: boolean; msg: string }>;
+  getHasActiveResume: () => boolean;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
-function ToolbarApp({ initialPosition, onPositionSave, onFill, t }: ToolbarAppProps) {
-  // pos.x = distance from left edge, pos.y = distance from bottom edge
+function ToolbarApp({
+  initialPosition,
+  onPositionSave,
+  onFill,
+  onSaveDraft,
+  onWriteBack,
+  onSaveMemory,
+  getHasActiveResume,
+  t,
+}: ToolbarAppProps) {
   const [pos, setPos] = useState(initialPosition);
   const [filling, setFilling] = useState(false);
   const [fillResult, setFillResult] = useState<FillResult | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  // Receives delta values from drag
   const handlePositionChange = useCallback(
     (delta: { x: number; y: number }) => {
       setPos((prev) => {
@@ -47,6 +62,12 @@ function ToolbarApp({ initialPosition, onPositionSave, onFill, t }: ToolbarAppPr
     }
   }, [filling, onFill]);
 
+  async function runSave(cb: () => Promise<{ ok: boolean; msg: string }>) {
+    setMenuOpen(false);
+    const { msg } = await cb();
+    setToast(msg);
+  }
+
   const total = fillResult
     ? fillResult.filled + fillResult.uncertain + fillResult.unrecognized
     : 0;
@@ -56,6 +77,10 @@ function ToolbarApp({ initialPosition, onPositionSave, onFill, t }: ToolbarAppPr
     left: pos.x,
     bottom: pos.y,
     zIndex: 999999,
+    // Host shadow-root container has pointer-events: none; opt back in here
+    // so the toolbar (and its bubble/menu children, which default to auto)
+    // still receives clicks.
+    pointerEvents: 'auto',
   };
 
   return (
@@ -63,14 +88,29 @@ function ToolbarApp({ initialPosition, onPositionSave, onFill, t }: ToolbarAppPr
       {showResult && fillResult && (
         <ResultBubble result={fillResult} onClose={() => setShowResult(false)} t={t} />
       )}
-      <FloatingToolbar
-        onPositionChange={handlePositionChange}
-        onFill={handleFill}
-        filling={filling}
-        fillResult={fillResult ? { filled: fillResult.filled, total } : null}
-        onToggleResult={() => setShowResult((v) => !v)}
-        t={t}
-      />
+      {toast && <ToolbarToast message={toast} onDismiss={() => setToast(null)} />}
+      <div style={{ position: 'relative' }}>
+        <FloatingToolbar
+          onPositionChange={handlePositionChange}
+          onFill={handleFill}
+          filling={filling}
+          fillResult={fillResult ? { filled: fillResult.filled, total } : null}
+          onToggleResult={() => setShowResult((v) => !v)}
+          onToggleSaveMenu={() => setMenuOpen((v) => !v)}
+          saveMenuOpen={menuOpen}
+          t={t}
+        />
+        {menuOpen && (
+          <SaveMenu
+            t={t}
+            hasActiveResume={getHasActiveResume()}
+            onSaveDraft={() => runSave(onSaveDraft)}
+            onWriteBack={() => runSave(onWriteBack)}
+            onSaveMemory={() => runSave(onSaveMemory)}
+            onClose={() => setMenuOpen(false)}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -80,6 +120,10 @@ export interface ToolbarMountOptions {
   initialPosition: { x: number; y: number };
   onPositionSave: (pos: { x: number; y: number }) => void;
   onFill: () => Promise<FillResult>;
+  onSaveDraft: () => Promise<{ ok: boolean; msg: string }>;
+  onWriteBack: () => Promise<{ ok: boolean; msg: string }>;
+  onSaveMemory: () => Promise<{ ok: boolean; msg: string }>;
+  getHasActiveResume: () => boolean;
 }
 
 /**
@@ -94,8 +138,13 @@ export async function mountToolbar(options: ToolbarMountOptions): Promise<{ unmo
 
   const ui = await createShadowRootUi(options.ctx, {
     name: 'formpilot-toolbar',
-    position: 'modal',
-    zIndex: 999999,
+    // 'inline' places the shadow host in normal document flow with 0 visible
+    // footprint (our inner wrapper is position: fixed). `modal` would span
+    // the full viewport and intercept clicks outside the toolbar, which
+    // broke radios/selects on the host page.
+    position: 'inline',
+    anchor: 'body',
+    append: 'last',
     onMount(container) {
       const root = ReactDOM.createRoot(container);
       root.render(
@@ -103,6 +152,10 @@ export async function mountToolbar(options: ToolbarMountOptions): Promise<{ unmo
           initialPosition={options.initialPosition}
           onPositionSave={options.onPositionSave}
           onFill={options.onFill}
+          onSaveDraft={options.onSaveDraft}
+          onWriteBack={options.onWriteBack}
+          onSaveMemory={options.onSaveMemory}
+          getHasActiveResume={options.getHasActiveResume}
           t={t}
         />,
       );

@@ -1,7 +1,12 @@
 import type { PlatformAdapter, FillResult, FillResultItem } from './adapters/types';
 import type { Resume } from '@/lib/storage/types';
-import { matchField } from './heuristic/engine';
+import { scanFields } from './scanner';
 import { fillElement } from './heuristic/fillers';
+import { runMemoryPhase } from '@/lib/capture/memory-phase';
+import { runFormPhase } from '@/lib/capture/form-phase';
+import type { PageMemoryEntry } from '@/lib/capture/types';
+import type { FormEntry } from '@/lib/storage/form-store';
+import type { FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
 
 // ─── Resume Path Resolver ─────────────────────────────────────────────────────
 
@@ -16,7 +21,6 @@ import { fillElement } from './heuristic/fillers';
  * - Array values are joined with ', '
  */
 export function getValueFromResume(resume: Resume, path: string): string {
-  // Handle indexed paths like "education[1].school"
   const indexMatch = path.match(/^(\w+)\[(\d+)\]\.(.+)$/);
   if (indexMatch) {
     const [, section, indexStr, field] = indexMatch;
@@ -27,143 +31,121 @@ export function getValueFromResume(resume: Resume, path: string): string {
     }
     return '';
   }
-
-  // Handle unindexed paths (existing logic)
   const parts = path.split('.');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let cursor: any = resume;
-
   for (const part of parts) {
     if (cursor === null || cursor === undefined) return '';
-
     if (Array.isArray(cursor)) {
-      // Use the first element of the array
       if (cursor.length === 0) return '';
       cursor = cursor[0];
     }
-
     cursor = cursor[part];
   }
-
   if (cursor === null || cursor === undefined) return '';
   if (Array.isArray(cursor)) return cursor.join(', ');
   return String(cursor);
 }
 
-// ─── Orchestrator ─────────────────────────────────────────────────────────────
-
 /**
- * Fill a document's form fields using a cascade strategy:
- * 1. Platform adapter (if present) — exact field mappings
- * 2. Heuristic engine — confidence-based matching for remaining fields
- *
- * Returns a FillResult with counts and per-field status.
+ * Fill a document's form fields using the cascade strategy:
+ *   Phase 1 (adapter) + Phase 2 (heuristic) — via scanFields
+ *   Phase 3 (page memory) — fallback for still-unrecognized fields
  */
 export async function orchestrateFill(
   doc: Document,
   resume: Resume,
   adapter: PlatformAdapter | null,
+  memoryEntries: PageMemoryEntry[] = [],
+  formEntries: Record<string, FormEntry> = {},
+  domainPrefs: FieldDomainPrefs = {},
+  currentDomain: string = '',
 ): Promise<FillResult> {
+  const scanned = await scanFields(doc, adapter);
   const items: FillResultItem[] = [];
-  const handledElements = new Set<Element>();
 
-  // ── Phase 1: Adapter ───────────────────────────────────────────────────────
-  if (adapter) {
-    const mappings = adapter.scan(doc);
+  for (const s of scanned) {
+    if ((s.element as HTMLElement).getAttribute?.('data-formpilot-restored') === 'draft') continue;
 
-    for (const mapping of mappings) {
-      const value = getValueFromResume(resume, mapping.resumePath);
-
-      let filled = false;
-      if (value) {
-        try {
-          filled = await adapter.fill(mapping.element, value, mapping.inputType);
-        } catch {
-          filled = false;
-        }
-      }
-
-      handledElements.add(mapping.element);
-
+    if (s.status === 'unrecognized' || !s.resumePath) {
       items.push({
-        element: mapping.element,
-        resumePath: mapping.resumePath,
-        label: mapping.label,
-        status: filled ? 'filled' : 'unrecognized',
-        confidence: mapping.confidence,
-        source: 'adapter',
-      });
-    }
-  }
-
-  // ── Phase 2: Heuristic fallback for remaining inputs ──────────────────────
-  const inputs = doc.querySelectorAll('input, select, textarea');
-
-  for (const el of inputs) {
-    if (handledElements.has(el)) continue;
-
-    // Skip non-interactive input types
-    if (el.tagName.toLowerCase() === 'input') {
-      const type = (el.getAttribute('type') ?? 'text').toLowerCase();
-      if (['hidden', 'submit', 'reset', 'button', 'image'].includes(type)) continue;
-    }
-
-    const mapping = matchField(el);
-
-    if (!mapping || mapping.confidence < 0.5) {
-      // Unrecognized
-      const label =
-        el.getAttribute('aria-label') ??
-        el.getAttribute('placeholder') ??
-        el.getAttribute('name') ??
-        el.getAttribute('id') ??
-        '';
-
-      items.push({
-        element: el,
+        element: s.element,
         resumePath: '',
-        label,
+        label: s.label,
         status: 'unrecognized',
-        confidence: mapping?.confidence ?? 0,
-        source: 'heuristic',
+        confidence: s.confidence,
+        source: s.source,
       });
       continue;
     }
 
-    const value = getValueFromResume(resume, mapping.resumePath);
+    const value = getValueFromResume(resume, s.resumePath);
     let filled = false;
-
     if (value) {
       try {
-        filled = await fillElement(el, value, mapping.inputType);
-      } catch {
-        filled = false;
-      }
+        if (s.source === 'adapter' && adapter) {
+          filled = await adapter.fill(s.element, value, s.inputType);
+        } else {
+          filled = await fillElement(s.element, value, s.inputType);
+        }
+      } catch { filled = false; }
     }
 
     let status: FillResultItem['status'];
-    if (!filled) {
-      status = 'unrecognized';
-    } else if (mapping.confidence >= 0.8) {
-      status = 'filled';
-    } else {
-      status = 'uncertain';
-    }
+    if (!filled) status = 'unrecognized';
+    else if (s.source === 'adapter' || s.confidence >= 0.8) status = 'filled';
+    else status = 'uncertain';
 
     items.push({
-      element: el,
-      resumePath: mapping.resumePath,
-      label: mapping.label,
+      element: s.element,
+      resumePath: s.resumePath,
+      label: s.label,
       status,
-      confidence: mapping.confidence,
-      source: 'heuristic',
+      confidence: s.confidence,
+      source: s.source,
     });
   }
 
-  // ── Tally counts ──────────────────────────────────────────────────────────
+  // Phase 3 — page memory fallback for still-unrecognized items.
+  if (memoryEntries.length > 0) {
+    const memoryFilled = await runMemoryPhase(doc, scanned, memoryEntries);
+    if (memoryFilled > 0) {
+      const byElement = new Map(items.map((it) => [it.element, it] as const));
+      for (const s of scanned) {
+        if (s.source !== 'memory') continue;
+        const it = byElement.get(s.element);
+        if (!it) continue;
+        it.status = 'filled';
+        it.source = 'memory';
+        it.resumePath = '(memory)';
+        it.confidence = 1.0;
+      }
+    }
+  }
+
+  // Phase 4 — cross-URL form entries.
+  let formHits: Array<{ signature: string; candidateId: string }> | undefined;
+  if (Object.keys(formEntries).length > 0) {
+    const { filled: formFilled, hits } = await runFormPhase(
+      doc, scanned, formEntries, domainPrefs, currentDomain,
+    );
+    if (hits.length > 0) formHits = hits;
+    if (formFilled > 0) {
+      const byElement = new Map(items.map((it) => [it.element, it] as const));
+      for (const s of scanned) {
+        if (s.source !== 'form') continue;
+        const it = byElement.get(s.element);
+        if (!it) continue;
+        it.status = 'filled';
+        it.source = 'form';
+        it.resumePath = '(form)';
+        it.confidence = 0.75;
+      }
+    }
+  }
+
   const filled = items.filter((i) => i.status === 'filled').length;
   const uncertain = items.filter((i) => i.status === 'uncertain').length;
   const unrecognized = items.filter((i) => i.status === 'unrecognized').length;
-
-  return { items, filled, uncertain, unrecognized };
+  return { items, filled, uncertain, unrecognized, formHits };
 }

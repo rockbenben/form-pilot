@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Settings } from '@/lib/storage/types';
+import { DEFAULT_ALLOWED_DOMAINS } from '@/lib/storage/types';
 import { getSettings, updateSettings } from '@/lib/storage/settings-store';
 import { useI18n } from '@/lib/i18n';
 
@@ -76,6 +77,44 @@ export default function SettingsSection() {
           <p className="text-xs text-gray-600 mt-1">{t('settings.apiKeyHint')}</p>
         </div>
       )}
+      <div className="mt-6 border-t border-gray-800 pt-4">
+        <h3 className="text-sm font-semibold mb-2 text-gray-300">{t('settings.capture.title')}</h3>
+        <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={settings.skipSensitive}
+            onChange={(e) => handleChange({ skipSensitive: e.target.checked })}
+          />
+          <span>{t('settings.capture.skipSensitive')}</span>
+        </label>
+
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-1">
+            <label className={labelBase.replace(' mb-1', '')}>{t('settings.capture.allowedDomains')}</label>
+            <button
+              onClick={() => handleChange({ allowedDomains: [...DEFAULT_ALLOWED_DOMAINS] })}
+              className="text-xs text-blue-400 hover:text-blue-300"
+            >
+              {t('settings.capture.allowedDomains.reset')}
+            </button>
+          </div>
+          <textarea
+            className={`${inputBase} h-36 resize-y`}
+            value={(settings.allowedDomains ?? []).join('\n')}
+            onChange={(e) =>
+              handleChange({
+                // Accept newline- or comma-separated lists so paste-from-anywhere works.
+                allowedDomains: e.target.value
+                  .split(/[\n,]/)
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              })
+            }
+            placeholder={'mokahr.com\nzhaopin.com\ngreenhouse.io'}
+          />
+          <p className="text-xs text-gray-600 mt-1">{t('settings.capture.allowedDomainsHint')}</p>
+        </div>
+      </div>
       {(saving || saved) && (
         <p className="text-xs text-gray-500 mt-1">
           {saving ? t('import.parsing') : '✓'}

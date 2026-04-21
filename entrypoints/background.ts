@@ -1,31 +1,200 @@
+// entrypoints/background.ts
 export default defineBackground(() => {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handleMessage(message).then(sendResponse);
-    return true; // keep channel open for async response
+    return true;
   });
 });
 
 async function handleMessage(message: { type: string; [key: string]: unknown }) {
-  // Dynamic imports to keep service worker lightweight
-  const { getResume, getActiveResumeId } = await import('@/lib/storage/resume-store');
+  const { getResume, getActiveResumeId, updateResume } = await import('@/lib/storage/resume-store');
   const { getSettings, updateSettings } = await import('@/lib/storage/settings-store');
+  const draftStore = await import('@/lib/storage/draft-store');
+  const memStore = await import('@/lib/storage/page-memory-store');
+  const formStore = await import('@/lib/storage/form-store');
+  const { applyWriteback } = await import('@/lib/capture/writeback');
 
   switch (message.type) {
     case 'GET_ACTIVE_RESUME': {
       const id = await getActiveResumeId();
       if (!id) return { ok: true, data: null };
-      const resume = await getResume(id);
-      return { ok: true, data: resume };
+      return { ok: true, data: await getResume(id) };
     }
-    case 'GET_SETTINGS': {
-      const settings = await getSettings();
-      return { ok: true, data: settings };
+
+    // Single round-trip used by content.ts::handleFill. Folds what would
+    // otherwise be 3 separate chrome.runtime.sendMessage calls
+    // (GET_ACTIVE_RESUME, GET_PAGE_MEMORY, GET_FORM_ENTRIES) into one.
+    case 'GET_FILL_CONTEXT': {
+      const { memoryUrl, pageDomain } = (message as unknown) as {
+        memoryUrl?: string;
+        pageDomain?: string;
+      };
+      const id = await getActiveResumeId();
+      const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
+      const [resume, memory, formEntries, domainPrefs] = await Promise.all([
+        id ? getResume(id) : Promise.resolve(null),
+        memoryUrl ? memStore.getPageMemory(memoryUrl) : Promise.resolve([]),
+        formStore.listFormEntries(),
+        domainPrefsStore.listFieldDomainPrefs(),
+      ]);
+      return {
+        ok: true,
+        data: { resume, memory, formEntries, domainPrefs, currentDomain: pageDomain ?? '' },
+      };
     }
+    case 'GET_SETTINGS':
+      return { ok: true, data: await getSettings() };
     case 'SAVE_TOOLBAR_POSITION': {
       const position = message.position as { x: number; y: number };
       await updateSettings({ toolbarPosition: position });
       return { ok: true, data: null };
     }
+
+    // ── Drafts ───────────────────────────────────────────────────────────
+    case 'SAVE_DRAFT': {
+      const { url, fields } = (message as unknown) as { url: string; fields: unknown };
+      try {
+        await draftStore.saveDraft(url, fields as never);
+        return { ok: true };
+      } catch (err) {
+        return { ok: false, error: String(err) };
+      }
+    }
+    case 'GET_DRAFT': {
+      const { url } = (message as unknown) as { url: string };
+      return { ok: true, data: await draftStore.getDraft(url) };
+    }
+    case 'DELETE_DRAFT': {
+      const { url } = (message as unknown) as { url: string };
+      await draftStore.deleteDraft(url);
+      return { ok: true };
+    }
+    case 'LIST_DRAFTS':
+      return { ok: true, data: await draftStore.listDrafts() };
+
+    // ── Page Memory (also fans out to the cross-URL form-entry store) ────
+    case 'SAVE_PAGE_MEMORY': {
+      const { url, fields } = (message as unknown) as {
+        url: string;
+        fields: Parameters<typeof memStore.savePageMemory>[1];
+      };
+      try {
+        const saved = await memStore.savePageMemory(url, fields);
+        // Mirror to the cross-URL form store so the same field on another
+        // site can be auto-filled without a per-URL memory entry.
+        await formStore.saveFormEntries(fields, url);
+        return { ok: true, data: { saved } };
+      } catch (err) {
+        return { ok: false, error: String(err) };
+      }
+    }
+    case 'GET_PAGE_MEMORY': {
+      const { url } = (message as unknown) as { url: string };
+      return { ok: true, data: await memStore.getPageMemory(url) };
+    }
+    case 'DELETE_PAGE_MEMORY': {
+      const { url } = (message as unknown) as { url: string };
+      await memStore.deletePageMemory(url);
+      return { ok: true };
+    }
+    case 'LIST_PAGE_MEMORY':
+      return { ok: true, data: await memStore.listPageMemory() };
+
+    // ── Cross-URL form entries (signature-keyed) ─────────────────────────
+    case 'GET_FORM_ENTRIES':
+      return { ok: true, data: await formStore.listFormEntries() };
+    case 'LIST_FORM_ENTRIES':
+      return { ok: true, data: await formStore.listFormEntries() };
+    case 'DELETE_FORM_ENTRY': {
+      const { signature } = (message as unknown) as { signature: string };
+      await formStore.deleteFormEntry(signature);
+      return { ok: true };
+    }
+    case 'CLEAR_FORM_ENTRIES':
+      await formStore.clearAllFormEntries();
+      return { ok: true };
+
+    case 'DELETE_FORM_CANDIDATE': {
+      const { signature, candidateId } = (message as unknown) as {
+        signature: string;
+        candidateId: string;
+      };
+      await formStore.deleteCandidate(signature, candidateId);
+      return { ok: true };
+    }
+    case 'UPDATE_FORM_CANDIDATE': {
+      const { signature, candidateId, value, displayValue } = (message as unknown) as {
+        signature: string;
+        candidateId: string;
+        value: string;
+        displayValue?: string;
+      };
+      await formStore.updateCandidate(signature, candidateId, value, displayValue);
+      return { ok: true };
+    }
+    case 'ADD_FORM_CANDIDATE': {
+      const { signature, value, displayValue } = (message as unknown) as {
+        signature: string;
+        value: string;
+        displayValue?: string;
+      };
+      const newId = await formStore.addCandidate(signature, value, displayValue);
+      return { ok: true, data: { id: newId } };
+    }
+    case 'SET_FORM_PIN': {
+      const { signature, candidateId } = (message as unknown) as {
+        signature: string;
+        candidateId: string | null;
+      };
+      await formStore.setFormPin(signature, candidateId);
+      return { ok: true };
+    }
+    case 'BUMP_FORM_HIT': {
+      const { signature, candidateId, sourceUrl } = (message as unknown) as {
+        signature: string;
+        candidateId: string;
+        sourceUrl: string;
+      };
+      await formStore.bumpCandidateHit(signature, candidateId, sourceUrl);
+      return { ok: true };
+    }
+    case 'LIST_DOMAIN_PREFS': {
+      const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
+      return { ok: true, data: await domainPrefsStore.listFieldDomainPrefs() };
+    }
+    case 'SET_DOMAIN_PREF': {
+      const { signature, domain, candidateId } = (message as unknown) as {
+        signature: string;
+        domain: string;
+        candidateId: string;
+      };
+      const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
+      await domainPrefsStore.setDomainPref(signature, domain, candidateId);
+      return { ok: true };
+    }
+    case 'CLEAR_DOMAIN_PREF': {
+      const { signature, domain } = (message as unknown) as {
+        signature: string;
+        domain: string;
+      };
+      const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
+      await domainPrefsStore.clearDomainPref(signature, domain);
+      return { ok: true };
+    }
+
+    // ── Write-back to resume ─────────────────────────────────────────────
+    case 'WRITE_BACK_TO_RESUME': {
+      const { pairs } = (message as unknown) as { pairs: { resumePath: string; value: string }[] };
+      const id = await getActiveResumeId();
+      if (!id) return { ok: false, error: 'no active resume' };
+      const resume = await getResume(id);
+      if (!resume) return { ok: false, error: 'active resume not found' };
+      const updated = applyWriteback(resume, pairs);
+      const { meta: _m, ...patch } = updated;
+      await updateResume(id, patch);
+      return { ok: true, data: { updated: pairs.length, name: resume.meta.name } };
+    }
+
     default:
       return { ok: false, error: `Unknown message type: ${message.type}` };
   }

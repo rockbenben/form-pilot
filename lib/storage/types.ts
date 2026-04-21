@@ -116,6 +116,14 @@ export interface Settings {
   toolbarPosition: { x: number; y: number };
   apiKey: string;
   apiProvider: 'deepseek' | 'openai' | '';
+  skipSensitive: boolean;
+  /**
+   * Hostnames (suffix match: `mokahr.com` also matches `jobs.mokahr.com`)
+   * where the floating toolbar auto-appears. Pages not in this list stay
+   * dormant unless they have saved drafts/memory or the user triggers fill
+   * from the popup.
+   */
+  allowedDomains: string[];
 }
 
 // ─── Factory & Defaults ──────────────────────────────────────────────────────
@@ -165,8 +173,23 @@ export function createEmptyResume(id: string, name: string): Resume {
   };
 }
 
+export const DEFAULT_ALLOWED_DOMAINS = [
+  // Chinese recruitment platforms
+  'mokahr.com', 'moka.com', 'zhaopin.com', 'liepin.com', 'zhipin.com',
+  'lagou.com', 'nowcoder.com',
+  // International ATS
+  'myworkday.com', 'myworkdayjobs.com', 'greenhouse.io', 'lever.co',
+  'icims.com', 'taleo.net', 'smartrecruiters.com',
+  // Chinese tech company career sites
+  'hotjob.cn', 'beisen.com', 'feishu.cn',
+];
+
 export const DEFAULT_SETTINGS: Settings = {
   toolbarPosition: { x: 16, y: 80 },
   apiKey: '',
   apiProvider: '',
+  skipSensitive: true,
+  // Spread so callers can't mutate the DEFAULT_ALLOWED_DOMAINS module export
+  // via a shared-reference bug.
+  allowedDomains: [...DEFAULT_ALLOWED_DOMAINS],
 };
