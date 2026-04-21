@@ -192,7 +192,13 @@ export default defineContentScript({
               // even a <select> for country-code splits. Hardcoding 'text' here
               // silently failed on non-text widgets.
               const kind = detectElementKind(it.element as Element) ?? 'text';
-              try { await fillElement(it.element as Element, picked.value, kind); } catch { /* ignore */ }
+              let ok = false;
+              try {
+                ok = await fillElement(it.element as Element, picked.value, kind);
+              } catch { ok = false; }
+              // Only bump hitCount AND prompt for domain-pref when the fill
+              // actually succeeded.
+              if (!ok) return;
               chrome.runtime.sendMessage({
                 type: 'BUMP_PROFILE_HIT',
                 resumePath,
@@ -271,9 +277,15 @@ export default defineContentScript({
                 // Detect the CURRENT element's kind — the stored entry.kind can diverge
                 // if the same signature is rendered by a different widget on this site.
                 const kind = detectElementKind(it.element as Element) ?? entry.kind;
+                let ok = false;
                 try {
-                  await fillElement(it.element as Element, val, kind);
-                } catch { /* ignore */ }
+                  ok = await fillElement(it.element as Element, val, kind);
+                } catch { ok = false; }
+                // Only bump hitCount AND prompt for domain-pref when the fill
+                // actually succeeded — otherwise read-only / wrong-widget fields
+                // inflate counts and prompt users to "remember" values they never
+                // saw filled.
+                if (!ok) return;
                 chrome.runtime.sendMessage({
                   type: 'BUMP_FORM_HIT',
                   signature: sig,
