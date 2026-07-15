@@ -7,10 +7,17 @@ import { useI18n } from '@/lib/i18n';
 interface BasicInfoProps {
   data: BasicInfo;
   onChange: (patch: Partial<BasicInfo>) => void;
+  /**
+   * Flush any debounced field edit to storage before a candidate mutation
+   * runs. Candidate add/edit/delete/pin write `basic` out-of-band in the
+   * background; without flushing first, the pending field-edit snapshot (taken
+   * before the candidate change) would later overwrite it and drop the change.
+   */
+  flushPendingSave: () => Promise<void>;
   refreshFromStorage: () => Promise<void>;
 }
 
-export default function BasicInfoSection({ data, onChange, refreshFromStorage }: BasicInfoProps) {
+export default function BasicInfoSection({ data, onChange, flushPendingSave, refreshFromStorage }: BasicInfoProps) {
   const { t } = useI18n();
   const [profileDomainPrefs, setProfileDomainPrefs] = useState<Record<string, Record<string, string>>>({});
 
@@ -32,8 +39,21 @@ export default function BasicInfoSection({ data, onChange, refreshFromStorage }:
   };
 
   const withRefresh = async (msg: Record<string, unknown>) => {
-    await chrome.runtime.sendMessage(msg);
-    await refreshFromStorage();
+    // Persist any in-flight field edit first so the debounced write can't later
+    // clobber the candidate mutation we're about to make (and vice versa).
+    // Guard the whole chain: if the flush write rejects, sendMessage would never
+    // run and the candidate op would silently no-op via an unhandled rejection.
+    try {
+      await flushPendingSave();
+      await chrome.runtime.sendMessage(msg);
+    } catch (err) {
+      console.error('Candidate mutation failed:', err);
+    } finally {
+      // Always resync from storage so the UI reflects what actually persisted —
+      // on failure the list repaints without the candidate instead of leaving
+      // the optimistically cleared input implying the add succeeded.
+      await refreshFromStorage();
+    }
   };
 
   return (

@@ -13,6 +13,8 @@ import {
   updateResume,
 } from '@/lib/storage/resume-store';
 
+import { coalescePendingPatch } from './coalesce-patch';
+import { mergeResumePatch } from '@/lib/storage/merge-resume-patch';
 import Sidebar, { type SectionId } from '@/components/popup/Sidebar';
 import ResumeSelector from '@/components/popup/ResumeSelector';
 import StatusBar from '@/components/popup/StatusBar';
@@ -138,11 +140,21 @@ export default function App() {
   // ─── Actions ──────────────────────────────────────────────────────────────
 
   const flushPendingSave = useCallback(async () => {
-    if (pendingRef.current) {
-      const { id, patch } = pendingRef.current;
+    const pending = pendingRef.current;
+    if (!pending) return;
+    clearTimeout(timerRef.current);
+    // Keep the pending patch buffered until the write actually succeeds — if we
+    // nulled it first and updateResume rejected, the user's in-flight edit would
+    // be silently lost with no timer left to retry it.
+    await updateResume(pending.id, pending.patch);
+    // Success. Clear only if a newer edit hasn't superseded it during the await.
+    if (pendingRef.current === pending) {
       pendingRef.current = null;
-      clearTimeout(timerRef.current);
-      await updateResume(id, patch);
+      // The debounce timer that would normally clear the 'saving' indicator was
+      // just cancelled, so drive the status transition here instead. Guard the
+      // idle flip so a later edit (status back to 'saving') isn't overwritten.
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus((s) => (s === 'saved' ? 'idle' : s)), 1500);
     }
   }, []);
 
@@ -153,12 +165,16 @@ export default function App() {
   }, [flushPendingSave]);
 
   const handleCreateResume = useCallback(async () => {
+    // Flush any in-flight field edit before switching active resume, or the
+    // pending debounce (keyed to the old resume) gets cancelled by the next
+    // edit and its patch is dropped — same guard the other switch handlers use.
+    await flushPendingSave();
     const name = `${i18n.t('resume.default')} ${resumes.length + 1}`;
     const created = await createResume(name);
     setResumes((prev) => [...prev, created]);
     setActiveId(created.meta.id);
     await setActiveResumeId(created.meta.id);
-  }, [resumes.length]);
+  }, [flushPendingSave, resumes.length]);
 
   const handleUpdate = useCallback(
     (patch: Partial<Omit<Resume, 'meta'>>) => {
@@ -166,11 +182,20 @@ export default function App() {
       setResumes((prev) =>
         prev.map((r) =>
           r.meta.id === activeId
-            ? { ...r, ...patch, meta: { ...r.meta, updatedAt: Date.now() } }
+            ? {
+                // Optimistic render. Shared merge rule keeps `basic` deep-merged
+                // so the render preserves the other basic fields (and candidate
+                // arrays) instead of replacing basic with just the changed key.
+                ...mergeResumePatch(r, patch),
+                meta: { ...r.meta, updatedAt: Date.now() },
+              }
             : r,
         ),
       );
-      pendingRef.current = { id: activeId, patch };
+      // Merge into any patch still pending for this resume — otherwise editing
+      // two different sections within the 500ms debounce window would drop the
+      // earlier section's patch (only the last top-level key would be written).
+      pendingRef.current = coalescePendingPatch(pendingRef.current, activeId, patch);
       clearTimeout(timerRef.current);
       setSaveStatus('saving');
       timerRef.current = setTimeout(async () => {
@@ -179,7 +204,9 @@ export default function App() {
           pendingRef.current = null;
           await updateResume(id, p);
           setSaveStatus('saved');
-          setTimeout(() => setSaveStatus('idle'), 1500);
+          // Guard the idle flip so it can't override a newer edit that already
+          // moved the status back to 'saving' within this 1.5s window.
+          setTimeout(() => setSaveStatus((s) => (s === 'saved' ? 'idle' : s)), 1500);
         }
       }, 500);
     },
@@ -258,7 +285,13 @@ export default function App() {
         return (
           <BasicInfoSection
             data={activeResume.basic}
-            onChange={(patch) => handleUpdate({ basic: { ...activeResume.basic, ...patch } })}
+            // Send only the changed scalar delta (not a full `basic` snapshot):
+            // candidate arrays (phone/email + pinned ids) are owned by the
+            // out-of-band mutation path, and a stale full snapshot taken mid-edit
+            // could otherwise overwrite a just-added candidate. handleUpdate /
+            // coalesce / updateResume deep-merge the `basic` key to preserve them.
+            onChange={(patch) => handleUpdate({ basic: patch })}
+            flushPendingSave={flushPendingSave}
             refreshFromStorage={refreshActiveResume}
           />
         );

@@ -1,4 +1,5 @@
 import { type Resume, createEmptyResume } from './types';
+import { mergeResumePatch } from './merge-resume-patch';
 
 const KEY_RESUMES = 'formpilot:resumes';
 const KEY_ACTIVE_RESUME_ID = 'formpilot:activeResumeId';
@@ -41,7 +42,11 @@ export async function getResume(id: string): Promise<Resume | null> {
   return all.find((r) => r.meta.id === id) ?? null;
 }
 
-/** Shallow-merge partial fields into an existing resume and bump updatedAt. */
+/**
+ * Merge partial fields into an existing resume and bump updatedAt. Uses the
+ * shared {@link mergeResumePatch} rule so `basic` deep-merges (candidate arrays
+ * written out-of-band survive a field-edit delta and vice versa).
+ */
 export async function updateResume(
   id: string,
   patch: Partial<Omit<Resume, 'meta'>>,
@@ -52,8 +57,7 @@ export async function updateResume(
 
   const existing = all[idx];
   const updated: Resume = {
-    ...existing,
-    ...patch,
+    ...mergeResumePatch(existing, patch),
     meta: { ...existing.meta, updatedAt: Date.now() },
   };
   all[idx] = updated;

@@ -52,6 +52,22 @@ describe('resume-store', () => {
     expect(updated.meta.updatedAt).toBeGreaterThanOrEqual(created.meta.updatedAt);
   });
 
+  it('deep-merges a partial basic patch, preserving candidate arrays it did not touch', async () => {
+    // Regression for the field-edit-vs-candidate race: the debounced field editor
+    // sends only the changed scalar delta (e.g. { basic: { name } }). That must
+    // NOT wipe basic.phone written out-of-band by a candidate mutation.
+    const created = await createResume('race');
+    const now = Date.now();
+    const phone = { id: 'p1', value: '13800138000', label: '', hitCount: 0, createdAt: now, updatedAt: now, lastUrl: '' };
+    // Out-of-band candidate write lands first.
+    await updateResume(created.meta.id, { basic: { ...created.basic, phone: [phone] } });
+    // Then a debounced scalar field edit arrives as a partial delta.
+    const updated = await updateResume(created.meta.id, { basic: { name: '张三' } });
+    expect(updated.basic.name).toBe('张三');
+    expect(updated.basic.phone).toHaveLength(1);           // candidate survived
+    expect(updated.basic.phone[0].value).toBe('13800138000');
+  });
+
   it('deletes a resume', async () => {
     const created = await createResume('to-delete');
     await deleteResume(created.meta.id);
