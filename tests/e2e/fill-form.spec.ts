@@ -4,7 +4,7 @@
  * NOTE: This test is NOT run in CI. It requires a headed Chrome instance with
  * the extension loaded from the local build output (.output/chrome-mv3).
  * To run manually:
- *   1. Build the extension: pnpm run build
+ *   1. Build the extension: yarn build
  *   2. Run: npx playwright test tests/e2e/fill-form.spec.ts --headed
  *
  * It also requires Playwright browsers to be installed:
