@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://chromewebstore.google.com/detail/formpilot/hhmmkjhbonceogplepkeildfepmcjaah"><b>Chrome Web Store</b></a> &middot;
   <a href="#install">Install</a> &middot;
   <a href="#what-it-does-for-you">What it does</a> &middot;
   <a href="#how-to-use-it">How to use</a> &middot;
@@ -40,11 +41,16 @@ FormPilot fills it for you.
 
 ## Install
 
-**Prerequisites:** Node.js 18+, pnpm 8+
+**[→ Install from the Chrome Web Store](https://chromewebstore.google.com/detail/formpilot/hhmmkjhbonceogplepkeildfepmcjaah)** — one click, auto-updates. This is all most people need.
+
+<details>
+<summary>Or build from source</summary>
+
+**Prerequisites:** Node.js 20+, Yarn (Classic)
 
 ```bash
-pnpm install
-pnpm run build
+yarn install
+yarn build
 ```
 
 ### Load into Chrome
@@ -55,6 +61,8 @@ pnpm run build
 4. Pin the icon to your toolbar
 
 That's it. The extension is installed.
+
+</details>
 
 ## How to use it
 
@@ -91,10 +99,11 @@ You manage all your candidates in **Dashboard → Basic Info** (phone / email) a
 ## Develop
 
 ```bash
-pnpm run dev          # HMR dev build, auto-reloads the extension
-pnpm run test         # 224 unit tests (Vitest)
-pnpm run test:watch
-pnpm run build        # production build to .output/chrome-mv3
+yarn dev              # HMR dev build, auto-reloads the extension
+yarn test             # 250 unit tests (Vitest)
+yarn test:watch
+yarn build            # production build to .output/chrome-mv3
+yarn zip              # package .output/formpilot-<version>-chrome.zip
 ```
 
 ## What's under the hood

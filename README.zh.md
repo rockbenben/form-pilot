@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://chromewebstore.google.com/detail/formpilot/hhmmkjhbonceogplepkeildfepmcjaah"><b>Chrome 应用商店</b></a> &middot;
   <a href="#安装">安装</a> &middot;
   <a href="#能帮你什么">功能</a> &middot;
   <a href="#怎么用">使用</a> &middot;
@@ -40,11 +41,16 @@ FormPilot 替你填。
 
 ## 安装
 
-**前置：** Node.js 18+，pnpm 8+
+**[→ 从 Chrome 应用商店安装](https://chromewebstore.google.com/detail/formpilot/hhmmkjhbonceogplepkeildfepmcjaah)** —— 一键安装，自动更新。绝大多数人用这个就够了。
+
+<details>
+<summary>或从源码构建</summary>
+
+**前置：** Node.js 20+，Yarn（Classic）
 
 ```bash
-pnpm install
-pnpm run build
+yarn install
+yarn build
 ```
 
 ### 加载到 Chrome
@@ -55,6 +61,8 @@ pnpm run build
 4. 把图标钉在工具栏
 
 装好了。
+
+</details>
 
 ## 怎么用
 
@@ -91,10 +99,11 @@ pnpm run build
 ## 开发
 
 ```bash
-pnpm run dev          # HMR 开发模式，扩展自动热加载
-pnpm run test         # 224 个单元测试（Vitest）
-pnpm run test:watch
-pnpm run build        # 正式构建到 .output/chrome-mv3
+yarn dev              # HMR 开发模式，扩展自动热加载
+yarn test             # 250 个单元测试（Vitest）
+yarn test:watch
+yarn build            # 正式构建到 .output/chrome-mv3
+yarn zip              # 打包 .output/formpilot-<version>-chrome.zip
 ```
 
 ## 工作原理

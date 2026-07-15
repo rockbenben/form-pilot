@@ -4,7 +4,7 @@
     "description": "Extension name shown in chrome://extensions and Chrome Web Store."
   },
   "extensionDescription": {
-    "message": "One-click resume autofill — remembers every answer across Moka, Workday, BOSS, Greenhouse and more.",
+    "message": "One-click resume autofill. Remembers every answer you type and refills it on the next job form. Works on any ATS; data stays local.",
     "description": "Extension description shown in chrome://extensions and Chrome Web Store."
   }
 }
