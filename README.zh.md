@@ -5,6 +5,15 @@
 <h1 align="center">FormPilot</h1>
 
 <p align="center">
+  求职网申一键自动填写，简历数据只存在你本机
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
+  <a href="https://github.com/rockbenben/365opensource"><img src="https://img.shields.io/badge/365%20%E5%BC%80%E6%BA%90%E8%AE%A1%E5%88%92-%23008-1f6feb" alt="365 开源计划 #008"></a>
+</p>
+
+<p align="center">
   不要再一次次把同样的答案敲进每个招聘网站。<br/>
   填一次，记一辈子，在哪儿都能自动填。
 </p>
@@ -110,12 +119,12 @@ yarn zip              # 打包 .output/formpilot-<version>-chrome.zip
 
 **四阶段填充级联。** 每个字段按顺序试这几层，哪层先填上就用哪个：
 
-| 阶段 | 知道什么 | 作用范围 |
-|------|---------|---------|
-| **1. 平台适配器** | 针对已知站点的硬编码规则（Moka、Workday 等） | 每个平台 |
-| **2. Heuristic + 资料** | 根据 label / name / placeholder 匹配，到你的资料 | 你的资料数据 |
-| **3. 页面记忆** | 这个 URL 的精确快照 | 仅此 URL |
-| **4. 跨站表单记录** | 按问题签名跨站匹配 | 任何有同样问题的站 |
+| 阶段                    | 知道什么                                         | 作用范围           |
+| ----------------------- | ------------------------------------------------ | ------------------ |
+| **1. 平台适配器**       | 针对已知站点的硬编码规则（Moka、Workday 等）     | 每个平台           |
+| **2. Heuristic + 资料** | 根据 label / name / placeholder 匹配，到你的资料 | 你的资料数据       |
+| **3. 页面记忆**         | 这个 URL 的精确快照                              | 仅此 URL           |
+| **4. 跨站表单记录**     | 按问题签名跨站匹配                               | 任何有同样问题的站 |
 
 **数据全在你本机。** 全部存在 `chrome.storage.local`（不上云、不走 API、不离开浏览器）。只有可选的 AI 匹配 API Key 存在 `chrome.storage.session` 里。
 
@@ -127,7 +136,7 @@ yarn zip              # 打包 .output/formpilot-<version>-chrome.zip
 
 ## 架构
 
-```
+```text
 ┌─ Popup ─────────────────────────────────────────────────┐
 │  活动资料、填充按钮、打开 Dashboard                      │
 └──────────────┬──────────────────────────────────────────┘
@@ -176,13 +185,13 @@ yarn zip              # 打包 .output/formpilot-<version>-chrome.zip
 如果一个站用的是标准控件库（ATS 平台通常是），你可以给它写快速硬编码规则。在 `lib/engine/adapters/my-platform.ts` 新建文件：
 
 ```typescript
-import type { PlatformAdapter, FieldMapping, InputType } from './types';
-import { fillElement } from '@/lib/engine/heuristic/fillers';
+import type { PlatformAdapter, FieldMapping, InputType } from "./types";
+import { fillElement } from "@/lib/engine/heuristic/fillers";
 
 export const myPlatformAdapter: PlatformAdapter = {
-  id: 'my-platform',
+  id: "my-platform",
   matchUrl: /my-platform\.com/i,
-  version: '1.0.0',
+  version: "1.0.0",
 
   scan(doc: Document): FieldMapping[] {
     // 查 form group，取 label，映射到资料路径
@@ -196,16 +205,6 @@ export const myPlatformAdapter: PlatformAdapter = {
 
 注册到 `lib/engine/adapters/registry.ts`，把域名加到 `lib/storage/types.ts` 的 `DEFAULT_ALLOWED_DOMAINS` 里，新装用户才会自动激活工具栏。
 
-## 技术栈
+## 关于 365 开源计划
 
-[WXT](https://wxt.dev)（Manifest V3）· React 18 · TypeScript · Tailwind CSS · chrome.storage · pdfjs-dist · mammoth · Vitest · Playwright
-
-## 关于 365 Open Source Project
-
-这是 [365 Open Source Project](https://github.com/rockbenben/365opensource) 的第 008 号项目。
-
-一人 + AI，一年做出 300+ 个开源项目。[提交你的想法 →](https://my.feishu.cn/share/base/form/shrcnI6y7rrmlSjbzkYXh6sjmzb)
-
-## License
-
-MIT
+[365 开源计划](https://github.com/rockbenben/365opensource) 的第 **#008** 个项目——一个人 + AI，一年 300+ 个开源项目。[提交你的需求 →](https://365.aishort.top/) · [Discord](https://discord.gg/PZTQfJ4GjX) · [Telegram](https://t.me/aishort_top)

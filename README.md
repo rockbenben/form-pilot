@@ -5,6 +5,15 @@
 <h1 align="center">FormPilot</h1>
 
 <p align="center">
+  One-click resume autofill for job applications, with your data kept local
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License: MIT"></a>
+  <a href="https://github.com/rockbenben/365opensource"><img src="https://img.shields.io/badge/365%20Open%20Source%20Plan-%23008-1f6feb" alt="365 Open Source Plan #008"></a>
+</p>
+
+<p align="center">
   Stop typing the same answers into every job application.<br/>
   Fill once, remember forever, fill anywhere.
 </p>
@@ -88,7 +97,7 @@ FormPilot has a `💾` button in the floating toolbar with three modes:
 
 - **📝 Save Draft** — snapshots the whole page. Come back to the same URL any day in the next 30, click the badge, everything's back.
 - **↩️ Save to Profile** — pushes your manual corrections back into your profile, so next time it fills correctly everywhere.
-- **🧠 Remember This Page** — learns the answers. The same URL fills automatically next time. The same *questions* on any other site also fill ("民族" on a new recruiter you've never used before).
+- **🧠 Remember This Page** — learns the answers. The same URL fills automatically next time. The same _questions_ on any other site also fill ("民族" on a new recruiter you've never used before).
 
 ### Multi-value fields (phone / email / anything you've answered more than one way)
 
@@ -110,12 +119,12 @@ yarn zip              # package .output/formpilot-<version>-chrome.zip
 
 **Four-phase fill cascade.** Each field tries layers in order until one fills it:
 
-| Layer | What it knows | Scope |
-|-------|---------------|-------|
-| **1. Platform Adapter** | Hard-coded rules for known sites (Moka, Workday…) | Per-platform |
-| **2. Heuristic + Profile** | Pattern matching on label / name / placeholder → your profile | Your profile data |
-| **3. Page Memory** | Snapshot of exactly this URL | This URL only |
-| **4. Form Entries** | Cross-URL match by question signature | Any site with the same question |
+| Layer                      | What it knows                                                 | Scope                           |
+| -------------------------- | ------------------------------------------------------------- | ------------------------------- |
+| **1. Platform Adapter**    | Hard-coded rules for known sites (Moka, Workday…)             | Per-platform                    |
+| **2. Heuristic + Profile** | Pattern matching on label / name / placeholder → your profile | Your profile data               |
+| **3. Page Memory**         | Snapshot of exactly this URL                                  | This URL only                   |
+| **4. Form Entries**        | Cross-URL match by question signature                         | Any site with the same question |
 
 **Storage lives on your machine.** Everything is in `chrome.storage.local` (no cloud, no API, nothing leaves your browser). Only an optional AI-matching API key goes in `chrome.storage.session`.
 
@@ -123,11 +132,11 @@ yarn zip              # package .output/formpilot-<version>-chrome.zip
 
 **SPA-aware.** `MutationObserver` + URL polling catches multi-page forms. When the page swaps sub-routes, the engine re-scans.
 
-For full architecture and storage layout, see [ARCHITECTURE.md](#architecture) below. For contributing a platform adapter, see [Adding a Platform Adapter](#adding-a-platform-adapter).
+For the full architecture and storage layout, see [Architecture](#architecture) below. For contributing a platform adapter, see [Adding a Platform Adapter](#adding-a-platform-adapter).
 
 ## Architecture
 
-```
+```text
 ┌─ Popup ─────────────────────────────────────────────────┐
 │  Active profile, Fill button, Open Dashboard            │
 └──────────────┬──────────────────────────────────────────┘
@@ -176,13 +185,13 @@ For full architecture and storage layout, see [ARCHITECTURE.md](#architecture) b
 If a site has a standard widget library (ATS platforms usually do), you can hard-code fast rules for it. Put a file at `lib/engine/adapters/my-platform.ts`:
 
 ```typescript
-import type { PlatformAdapter, FieldMapping, InputType } from './types';
-import { fillElement } from '@/lib/engine/heuristic/fillers';
+import type { PlatformAdapter, FieldMapping, InputType } from "./types";
+import { fillElement } from "@/lib/engine/heuristic/fillers";
 
 export const myPlatformAdapter: PlatformAdapter = {
-  id: 'my-platform',
+  id: "my-platform",
   matchUrl: /my-platform\.com/i,
-  version: '1.0.0',
+  version: "1.0.0",
 
   scan(doc: Document): FieldMapping[] {
     // Query form groups, extract labels, map to resume paths
@@ -196,16 +205,6 @@ export const myPlatformAdapter: PlatformAdapter = {
 
 Register it in `lib/engine/adapters/registry.ts` and add the domain to `DEFAULT_ALLOWED_DOMAINS` in `lib/storage/types.ts` so the toolbar auto-activates.
 
-## Tech Stack
+## About the 365 Open Source Plan
 
-[WXT](https://wxt.dev) (Manifest V3) · React 18 · TypeScript · Tailwind CSS · chrome.storage · pdfjs-dist · mammoth · Vitest · Playwright
-
-## About 365 Open Source Project
-
-This is project #008 of the [365 Open Source Project](https://github.com/rockbenben/365opensource).
-
-One person + AI, 300+ open source projects in a year. [Submit your idea →](https://my.feishu.cn/share/base/form/shrcnI6y7rrmlSjbzkYXh6sjmzb)
-
-## License
-
-MIT
+Project **#008** of the [365 Open Source Plan](https://github.com/rockbenben/365opensource) — one person + AI, 300+ open-source projects in a year. [Submit your idea →](https://365.aishort.top/) · [Discord](https://discord.gg/PZTQfJ4GjX) · [Telegram](https://t.me/aishort_top)
