@@ -7,7 +7,7 @@ import { computeSignatureFor } from './signature';
 import { detectElementKind } from './element-value';
 import { fillElement } from '@/lib/engine/heuristic/fillers';
 
-export interface FormPhaseFill {
+interface FormPhaseFill {
   signature: string;
   candidateId: string;
 }

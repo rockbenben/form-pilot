@@ -1,15 +1,20 @@
 {
+  // WXT generates .wxt/tsconfig.json carrying the extension globals (chrome,
+  // createShadowRootUi, ContentScriptContext) and the path aliases. This file
+  // used to declare its own options and exclude .wxt entirely, so
+  // `tsc --noEmit` produced 160+ phantom "Cannot find name 'chrome'" errors and
+  // was unusable — and because `wxt build` only transpiles, nothing checked
+  // types at all. Run `wxt prepare` (or `yarn typecheck`) to regenerate .wxt.
+  "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
     "jsx": "react-jsx",
-    "strict": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "paths": {
-      "@/*": ["./*"]
-    }
+    // Explicit: the inherited config sets no `types`, and automatic @types
+    // discovery was not picking up @types/chrome, so every `chrome.*` call
+    // in the codebase read as an undefined global.
+    "types": ["chrome", "node"]
   },
-  "exclude": ["node_modules", ".output", ".wxt"]
+  // `include` deliberately not overridden: the inherited one is `../**/*`
+  // relative to .wxt, i.e. the whole project, and it is what pulls in
+  // .wxt/wxt.d.ts and the auto-import declarations it references.
+  "exclude": ["node_modules", ".output", ".preview"]
 }

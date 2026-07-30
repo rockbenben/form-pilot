@@ -25,3 +25,5 @@ coverage/
 # Build artifacts
 *.tgz
 .superpowers/
+.preview/
+docs/superpowers/

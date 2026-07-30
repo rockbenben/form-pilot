@@ -1,4 +1,4 @@
-export const SENSITIVE_PATTERNS: RegExp[] = [
+const SENSITIVE_PATTERNS: RegExp[] = [
   /id.?card/i,
   /身份证/,
   /bank.?card/i,     // covers bankcard, bank-card, bank_card, bankCard

@@ -5,7 +5,7 @@ const KEY = 'formpilot:profileDomainPrefs';
 export type ProfileCandidatePath = 'basic.phone' | 'basic.email';
 
 /** resumeId → resumePath → domain → candidateId */
-export type ProfileDomainPrefs = Record<string, Record<string, Record<string, string>>>;
+type ProfileDomainPrefs = Record<string, Record<string, Record<string, string>>>;
 
 async function readAll(): Promise<ProfileDomainPrefs> {
   const res = await chrome.storage.local.get(KEY);
