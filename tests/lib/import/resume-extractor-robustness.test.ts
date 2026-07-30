@@ -9,9 +9,16 @@ describe('extractResumeFields — adversarial input', () => {
   it('handles empty / whitespace-only text', () => {
     for (const t of ['', '   ', '\n\n\t  \n']) {
       const r = extractResumeFields(t);
-      expect(r.basic).toEqual({ name: '', email: '', phone: '' });
+      expect(r.basic).toEqual({
+        name: '', email: '', phone: '',
+        gender: '', birthday: '', location: '', ethnicity: '', politicalStatus: '',
+        workStartDate: '', currentSalary: '', jobStatus: '', wechat: '',
+      });
       expect(r.education).toEqual([]);
-      expect(r.skills).toEqual({ languages: [], frameworks: [], tools: [] });
+      expect(r.work).toEqual([]);
+      expect(r.projects).toEqual([]);
+      expect(r.jobPreference).toEqual({ positions: [], salaryRange: '', cities: [] });
+      expect(r.skills).toEqual({ languages: [], tools: [] });
     }
   });
 

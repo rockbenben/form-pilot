@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { importResume } from '@/lib/storage/resume-store';
 import { extractResumeFields, toResume } from '@/lib/import/resume-extractor';
 import { extractTextFromPdf } from '@/lib/import/pdf-parser';
-import { extractTextFromWord } from '@/lib/import/word-parser';
+import { extractTextFromWord, LEGACY_DOC_ERROR } from '@/lib/import/word-parser';
 import { createEmptyResume } from '@/lib/storage/types';
 import { useI18n } from '@/lib/i18n';
 
@@ -56,7 +56,10 @@ export default function ImportDialog({ onClose, onImported }: Props) {
         await handleResumeFile(file);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('import.error.format'));
+      const raw = err instanceof Error ? err.message : '';
+      // The parser signals the one unreadable format with a sentinel rather
+      // than a user-facing string, so the wording lives with the other copy.
+      setError(raw === LEGACY_DOC_ERROR ? t('import.error.legacyDoc') : raw || t('import.error.format'));
     } finally {
       setLoading(false);
     }
@@ -91,13 +94,19 @@ export default function ImportDialog({ onClose, onImported }: Props) {
     const resumeName = extracted.basic.name || file.name.replace(/\.[^.]+$/, '');
     const resume = toResume(extracted, id, resumeName);
 
-    // Build a complete Resume by merging with an empty template
+    // Build a complete Resume by merging with an empty template. This used to
+    // list only basic/education/skills, silently discarding everything else
+    // toResume produced — so work, projects and job preference never reached
+    // storage no matter how well they extracted.
     const base = createEmptyResume(id, resumeName);
     const fullResume = {
       ...base,
       basic: { ...base.basic, ...resume.basic },
       education: resume.education,
+      work: resume.work,
+      projects: resume.projects,
       skills: { ...base.skills, ...resume.skills },
+      jobPreference: { ...base.jobPreference, ...resume.jobPreference },
     };
 
     await importResume(JSON.stringify(fullResume));
