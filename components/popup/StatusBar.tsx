@@ -2,6 +2,7 @@ import React from 'react';
 import type { Resume } from '@/lib/storage/types';
 import { useI18n } from '@/lib/i18n';
 import { countFields } from '@/lib/storage/resume-utils';
+import { STATUS_COLORS } from '@/lib/ui/field-status';
 
 interface StatusBarProps {
   resume: Resume | null;
@@ -29,21 +30,35 @@ export default function StatusBar({ resume, onImport, onExport }: StatusBarProps
   }
 
   const { filled, total } = countFields(resume);
-  const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
-  const barColor = pct >= 80 ? 'bg-green-500' : pct >= 40 ? 'bg-blue-500' : 'bg-amber-500';
+  const missing = total - filled;
 
   return (
     <div className="flex items-center justify-between px-3 py-2 border-t border-gray-800 bg-gray-950 shrink-0 gap-3">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">
-          {t('popup.progress', { filled, total, pct })}
-        </span>
-        <div className="flex-1 max-w-[160px] h-1.5 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${barColor}`}
-            style={{ width: `${pct}%` }}
-          />
+      {/* Same two segments and the same colours as the popup's bar. The old
+          version graded one bar green/blue/amber by percentage, which made the
+          bar's colour mean "how complete" here and "which field state" there —
+          two meanings for one visual signal across two surfaces of one product. */}
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex flex-1 max-w-[200px] h-1.5 gap-px rounded-full overflow-hidden bg-gray-800">
+          {[
+            { key: 'filled', n: filled, color: STATUS_COLORS.filled },
+            { key: 'missing', n: missing, color: STATUS_COLORS.empty },
+          ].map((s) =>
+            s.n === 0 ? null : (
+              <div key={s.key} style={{ width: `${(s.n / total) * 100}%`, backgroundColor: s.color }} />
+            ),
+          )}
         </div>
+        <span className="flex items-baseline gap-1 text-xs shrink-0 whitespace-nowrap">
+          <span className="font-semibold tabular-nums" style={{ color: STATUS_COLORS.filled }}>{filled}</span>
+          <span className="text-gray-500">{t('popup.stat.filled')}</span>
+          {missing > 0 && (
+            <>
+              <span className="ml-1.5 font-semibold tabular-nums" style={{ color: STATUS_COLORS.empty }}>{missing}</span>
+              <span className="text-gray-500">{t('popup.stat.missing')}</span>
+            </>
+          )}
+        </span>
       </div>
       <div className="flex gap-2 shrink-0">
         <button

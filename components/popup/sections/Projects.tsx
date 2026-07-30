@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ProjectEntry } from '@/lib/storage/types';
-import { FormField, TagListField } from '../FormField';
+import { FormField, TagListField, EndDateField } from '../FormField';
 import ArraySection from '../ArraySection';
 import { useI18n } from '@/lib/i18n';
 
@@ -56,11 +56,11 @@ export default function ProjectsSection({ data, onChange }: ProjectsProps) {
               onChange={(v) => patch({ startDate: v })}
               type="month"
             />
-            <FormField
+            <EndDateField
               label={t('projects.endDate')}
+              presentLabel={t('date.present')}
               value={item.endDate}
               onChange={(v) => patch({ endDate: v })}
-              type="month"
             />
           </div>
           <FormField

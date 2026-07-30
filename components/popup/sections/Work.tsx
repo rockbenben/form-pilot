@@ -1,6 +1,6 @@
 import React from 'react';
 import type { WorkEntry } from '@/lib/storage/types';
-import { FormField } from '../FormField';
+import { FormField, EndDateField } from '../FormField';
 import ArraySection from '../ArraySection';
 import { useI18n } from '@/lib/i18n';
 
@@ -82,11 +82,11 @@ export default function WorkSection({ data, onChange }: WorkProps) {
               onChange={(v) => patch({ startDate: v })}
               type="month"
             />
-            <FormField
+            <EndDateField
               label={t('work.endDate')}
+              presentLabel={t('date.present')}
               value={item.endDate}
               onChange={(v) => patch({ endDate: v })}
-              type="month"
             />
           </div>
           <FormField

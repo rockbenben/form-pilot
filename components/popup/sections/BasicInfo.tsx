@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { BasicInfo } from '@/lib/storage/types';
-import { FormField, TagListField } from '../FormField';
+import { FormField, TagListField, FieldGroup } from '../FormField';
 import CandidateListField from '../CandidateListField';
 import { useI18n } from '@/lib/i18n';
 
@@ -23,7 +23,14 @@ export default function BasicInfoSection({ data, onChange, flushPendingSave, ref
 
   const refreshPrefs = useCallback(async () => {
     const res = await chrome.runtime.sendMessage({ type: 'LIST_PROFILE_DOMAIN_PREFS' });
-    setProfileDomainPrefs(res?.ok ? (res.data as Record<string, Record<string, string>>) : {});
+    // `ok` without `data` is not a hypothetical: it is what a handler that
+    // returns early looks like from here. Reading `.data` straight through
+    // put `undefined` in state, and the next render tore the whole section
+    // down on `profileDomainPrefs['basic.phone']` — a blank page with nothing
+    // on screen saying why.
+    setProfileDomainPrefs(
+      (res?.ok ? (res.data as Record<string, Record<string, string>> | undefined) : undefined) ?? {},
+    );
   }, []);
 
   useEffect(() => { refreshPrefs(); }, [refreshPrefs]);
@@ -58,6 +65,7 @@ export default function BasicInfoSection({ data, onChange, flushPendingSave, ref
 
   return (
     <div>
+      <FieldGroup title={t('basic.group.contact')}>
       <div className="grid grid-cols-2 gap-x-3">
         <FormField
           label={t('basic.name')}
@@ -120,6 +128,9 @@ export default function BasicInfoSection({ data, onChange, flushPendingSave, ref
           await refreshPrefs();
         }}
       />
+      </FieldGroup>
+
+      <FieldGroup title={t('basic.group.personal')}>
       <div className="grid grid-cols-2 gap-x-3">
         <FormField
           label={t('basic.gender')}
@@ -153,13 +164,43 @@ export default function BasicInfoSection({ data, onChange, flushPendingSave, ref
           onChange={(v) => onChange({ location: v })}
         />
       </div>
-      <TagListField
-        label={t('basic.willingLocations')}
-        tags={data.willingLocations}
-        onChange={(v) => onChange({ willingLocations: v })}
-        placeholder={t('tag.placeholder')}
+      </FieldGroup>
+
+      <FieldGroup title={t('basic.group.status')}>
+      <div className="grid grid-cols-2 gap-x-3">
+        <FormField
+          label={t('basic.workStartDate')}
+          value={data.workStartDate}
+          onChange={(v) => onChange({ workStartDate: v })}
+          placeholder="2015-03"
+        />
+        <FormField
+          label={t('basic.jobStatus')}
+          value={data.jobStatus}
+          onChange={(v) => onChange({ jobStatus: v })}
+          placeholder={t('basic.jobStatus.placeholder')}
+        />
+        <FormField
+          label={t('basic.currentSalary')}
+          value={data.currentSalary}
+          onChange={(v) => onChange({ currentSalary: v })}
+          placeholder="30-40K"
+        />
+      </div>
+      </FieldGroup>
+
+      <FieldGroup title={t('basic.summary')}>
+      <FormField
+        label=""
+        placeholder={t('basic.summary.placeholder')}
+        value={data.summary}
+        onChange={(v) => onChange({ summary: v })}
+        type="textarea"
+        rows={4}
       />
-      <p className="text-xs text-gray-500 mb-2">{t('basic.socialLinks')}</p>
+      </FieldGroup>
+
+      <FieldGroup title={t('basic.socialLinks')}>
       <FormField
         label={t('basic.socialLinks.github')}
         value={data.socialLinks['github'] ?? ''}
@@ -178,6 +219,12 @@ export default function BasicInfoSection({ data, onChange, flushPendingSave, ref
         onChange={(v) => updateSocialLink('portfolio', v)}
         placeholder="https://yoursite.com"
       />
+      <FormField
+        label={t('basic.socialLinks.wechat')}
+        value={data.socialLinks['wechat'] ?? ''}
+        onChange={(v) => updateSocialLink('wechat', v)}
+      />
+    </FieldGroup>
     </div>
   );
 }

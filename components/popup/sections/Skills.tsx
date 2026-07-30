@@ -20,12 +20,6 @@ export default function SkillsSection({ data, onChange }: SkillsProps) {
         placeholder={t('tag.placeholder')}
       />
       <TagListField
-        label={t('skills.frameworks')}
-        tags={data.frameworks}
-        onChange={(v) => onChange({ frameworks: v })}
-        placeholder={t('tag.placeholder')}
-      />
-      <TagListField
         label={t('skills.tools')}
         tags={data.tools}
         onChange={(v) => onChange({ tools: v })}

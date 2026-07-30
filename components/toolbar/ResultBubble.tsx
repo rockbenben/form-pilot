@@ -1,28 +1,20 @@
 import React from 'react';
-import type { FillResult, FillStatus } from '@/lib/engine/adapters/types';
+import type { FillResult } from '@/lib/engine/adapters/types';
+import { STATUS_COLORS, STATUS_ICONS } from '@/lib/ui/field-status';
 
 interface ResultBubbleProps {
   result: FillResult;
   onClose: () => void;
-  t: (key: string) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
-const STATUS_ICONS: Record<FillStatus, string> = {
-  filled: '✅',
-  uncertain: '⚠️',
-  unrecognized: '❌',
-};
-
-const STATUS_COLORS: Record<FillStatus, string> = {
-  filled: '#4ade80',
-  uncertain: '#facc15',
-  unrecognized: '#f87171',
-};
-
 export default function ResultBubble({ result, onClose, t }: ResultBubbleProps) {
-  const unfilledItems = result.items
-    .filter((item) => item.status !== 'filled')
-    .slice(0, 5);
+  // Only fields FormPilot actually recognized are worth listing. An
+  // `unrecognized` row is a page input that was never ours to fill — listing
+  // those buried the actionable rows under noise.
+  const actionableItems = result.items
+    .filter((item) => item.status === 'empty' || item.status === 'uncertain')
+    .slice(0, 6);
 
   const bubbleStyle: React.CSSProperties = {
     position: 'absolute',
@@ -96,22 +88,28 @@ export default function ResultBubble({ result, onClose, t }: ResultBubbleProps) 
       </div>
 
       <div style={statsRowStyle}>
-        <span style={statStyle(STATUS_COLORS.filled)}>
+        <span style={statStyle(STATUS_COLORS.filled)} title={t('toolbar.filled')}>
           {STATUS_ICONS.filled} {result.filled}
         </span>
-        <span style={statStyle(STATUS_COLORS.uncertain)}>
+        <span style={statStyle(STATUS_COLORS.uncertain)} title={t('toolbar.uncertain')}>
           {STATUS_ICONS.uncertain} {result.uncertain}
         </span>
-        <span style={statStyle(STATUS_COLORS.unrecognized)}>
-          {STATUS_ICONS.unrecognized} {result.unrecognized}
+        <span style={statStyle(STATUS_COLORS.empty)} title={t('toolbar.empty')}>
+          {STATUS_ICONS.empty} {result.empty}
         </span>
       </div>
 
-      {unfilledItems.length > 0 && (
+      {result.empty > 0 && (
+        <div style={{ ...itemRowStyle, color: '#93c5fd', marginBottom: '8px' }}>
+          {t('toolbar.empty.hint')}
+        </div>
+      )}
+
+      {actionableItems.length > 0 && (
         <>
           <div style={dividerStyle} />
           <div>
-            {unfilledItems.map((item, i) => (
+            {actionableItems.map((item, i) => (
               <div key={i} style={itemRowStyle}>
                 <span>{STATUS_ICONS[item.status]}</span>
                 <span
@@ -128,6 +126,12 @@ export default function ResultBubble({ result, onClose, t }: ResultBubbleProps) 
             ))}
           </div>
         </>
+      )}
+
+      {result.unrecognized > 0 && (
+        <div style={{ ...itemRowStyle, color: '#6b7280', marginBottom: 0, marginTop: '6px' }}>
+          {t('toolbar.unrecognized.note', { n: result.unrecognized })}
+        </div>
       )}
     </div>
   );

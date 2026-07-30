@@ -40,7 +40,7 @@ export default function Sidebar({ active, onChange, className }: SidebarProps) {
           <button
             key={item.id}
             onClick={() => onChange(item.id)}
-            className={`w-full text-left px-3 py-2 text-xs rounded-none transition-colors
+            className={`w-full text-left px-4 py-2 text-sm rounded-none transition-colors
               ${active === item.id
                 ? 'bg-blue-500/20 text-blue-400 border-r-2 border-blue-400'
                 : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
@@ -53,7 +53,7 @@ export default function Sidebar({ active, onChange, className }: SidebarProps) {
       <div className="border-t border-gray-800">
         <button
           onClick={() => onChange('settings')}
-          className={`w-full text-left px-3 py-2 text-xs rounded-none transition-colors
+          className={`w-full text-left px-4 py-2 text-sm rounded-none transition-colors
             ${active === 'settings'
               ? 'bg-blue-500/20 text-blue-400 border-r-2 border-blue-400'
               : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'

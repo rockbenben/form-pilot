@@ -78,10 +78,20 @@ export default function SavedPagesSection() {
       chrome.runtime.sendMessage({ type: 'LIST_FORM_ENTRIES' }),
       chrome.runtime.sendMessage({ type: 'LIST_DOMAIN_PREFS' }),
     ]);
-    setDrafts(d?.ok ? (d.data as DraftSnapshot[]) : []);
-    setMemory(m?.ok ? (m.data as Record<string, PageMemoryEntry[]>) : {});
-    setFormEntries(f?.ok ? (f.data as Record<string, FormEntry>) : {});
-    setDomainPrefs(dp?.ok ? (dp.data as FieldDomainPrefs) : {});
+    // Check the shape, not just `ok`. A reply that says ok but carries the
+    // wrong `data` — a handler that returned early, a build where the store
+    // changed shape — used to land straight in state, and the next render
+    // threw on `drafts.map`. That took the section down; the surrounding
+    // error boundary now contains it, but an empty list the user can act on
+    // beats a page that will not open.
+    const asArray = <X,>(v: unknown): X[] => (Array.isArray(v) ? (v as X[]) : []);
+    const asRecord = <X,>(v: unknown): Record<string, X> =>
+      v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, X>) : {};
+
+    setDrafts(d?.ok ? asArray<DraftSnapshot>(d.data) : []);
+    setMemory(m?.ok ? asRecord<PageMemoryEntry[]>(m.data) : {});
+    setFormEntries(f?.ok ? asRecord<FormEntry>(f.data) : {});
+    setDomainPrefs(dp?.ok ? (asRecord(dp.data) as FieldDomainPrefs) : {});
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
@@ -312,7 +322,10 @@ function FormEntryPanel({
   domains: Record<string, string>;
   onChanged: () => void;
   now: number;
-  t: (key: string, vars?: Record<string, string>) => string;
+  // Must match the app's real `t`, which substitutes numbers too —
+  // formatRelativeTime passes `{ n: 5 }`. Declaring it narrower here made
+  // this component reject the very function it is always handed.
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   const [adding, setAdding] = React.useState(false);
   const [addValue, setAddValue] = React.useState('');
