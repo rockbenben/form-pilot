@@ -11,7 +11,11 @@
  * optimistic render, the debounce coalescer, and the storage write — so they
  * cannot drift out of lockstep and silently reintroduce the clobber bug.
  */
-export function mergeResumePatch<T extends object>(base: T, patch: Partial<T>): T {
+export type PatchOf<T> = Partial<{
+  [K in keyof T]: K extends 'basic' ? Partial<T[K]> : T[K];
+}>;
+
+export function mergeResumePatch<T extends object>(base: T, patch: PatchOf<T>): T {
   const merged = { ...base, ...patch };
   const baseBasic = (base as { basic?: object }).basic;
   const patchBasic = (patch as { basic?: object }).basic;

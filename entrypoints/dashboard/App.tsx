@@ -1,6 +1,6 @@
 import './style.css';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { Resume } from '@/lib/storage/types';
+import type { Resume, ResumePatch } from '@/lib/storage/types';
 import { I18nContext, useI18nProvider } from '@/lib/i18n';
 import {
   createResume,
@@ -19,6 +19,7 @@ import Sidebar, { type SectionId } from '@/components/popup/Sidebar';
 import ResumeSelector from '@/components/popup/ResumeSelector';
 import StatusBar from '@/components/popup/StatusBar';
 import ImportDialog from '@/components/popup/ImportDialog';
+import SectionErrorBoundary from '@/components/popup/SectionErrorBoundary';
 
 import BasicInfoSection from '@/components/popup/sections/BasicInfo';
 import EducationSection from '@/components/popup/sections/Education';
@@ -39,8 +40,8 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // ─── Pending save refs (debounce race-condition fix) ──────────────────────
-  const pendingRef = useRef<{ id: string; patch: Partial<Omit<Resume, 'meta'>> } | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const pendingRef = useRef<{ id: string; patch: ResumePatch } | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const loadResumes = useCallback(async () => {
     const [all, storedActiveId] = await Promise.all([
@@ -177,7 +178,7 @@ export default function App() {
   }, [flushPendingSave, resumes.length]);
 
   const handleUpdate = useCallback(
-    (patch: Partial<Omit<Resume, 'meta'>>) => {
+    (patch: ResumePatch) => {
       if (!activeId) return;
       setResumes((prev) =>
         prev.map((r) =>
@@ -216,21 +217,14 @@ export default function App() {
   const handleDeleteResume = useCallback(async (id: string) => {
     await flushPendingSave();
     await deleteResume(id);
-    const remaining = resumes.filter((r) => r.meta.id !== id);
+    // Re-read instead of filtering local state: `resumes` can be stale if
+    // another tab changed the list, and deriving from it would drop whatever
+    // that tab added. `deleteResume` owns repointing the active profile, so
+    // there is nothing to decide here — just reflect what storage now says.
+    const [remaining, nextActive] = await Promise.all([listResumes(), getActiveResumeId()]);
     setResumes(remaining);
-    if (activeId === id) {
-      const nextId = remaining.length > 0 ? remaining[0].meta.id : null;
-      setActiveId(nextId);
-      if (nextId) {
-        await setActiveResumeId(nextId);
-      } else {
-        // No profiles left — clear the stored pointer so init() on next
-        // launch doesn't chase an orphan id. (The UI's canDelete = > 1
-        // guard normally prevents landing here, but be explicit.)
-        await chrome.storage.local.remove('formpilot:activeResumeId');
-      }
-    }
-  }, [flushPendingSave, resumes, activeId]);
+    setActiveId(nextActive);
+  }, [flushPendingSave]);
 
   const handleRenameResume = useCallback(async (id: string, newName: string) => {
     // Flush any in-flight field edit first so the debounced updateResume
@@ -394,9 +388,18 @@ export default function App() {
 
         {/* Content area */}
         <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto px-8 py-6">
             <div className="max-w-3xl">
-              {renderContent()}
+              {/* Scoped to the content area so a section that throws leaves the
+                  sidebar standing. It used to take the whole tree down: black
+                  page, no nav, no way back to a section that still worked. */}
+              <SectionErrorBoundary
+                resetKey={section}
+                fallbackTitle={i18n.t('section.error.title')}
+                fallbackHint={i18n.t('section.error.hint')}
+              >
+                {renderContent()}
+              </SectionErrorBoundary>
             </div>
           </div>
 

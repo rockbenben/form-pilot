@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   createResume, getResume, listResumes, updateResume, deleteResume, renameResume,
-  getActiveResumeId, setActiveResumeId, importResume,
+  getActiveResumeId, setActiveResumeId, importResume, resolveActiveResume,
 } from '@/lib/storage/resume-store';
 import {
   setProfileDomainPref,
@@ -154,5 +154,159 @@ describe('resume-store · deleteResume cascades profile domain prefs', () => {
     await deleteResume(r1.meta.id);
     expect(await listForResume(r1.meta.id)).toEqual({});
     expect((await listForResume(r2.meta.id))['basic.phone']['workday.com']).toBe('c2');
+  });
+});
+
+describe('resume-store · resolveActiveResume repairs the selection', () => {
+  it('returns null when there are no resumes at all', async () => {
+    await chrome.storage.local.clear();
+    expect(await resolveActiveResume()).toBeNull();
+  });
+
+  it('returns the selected resume when the id is valid', async () => {
+    await chrome.storage.local.clear();
+    await createResume('one');
+    const two = await createResume('two');
+    await setActiveResumeId(two.meta.id);
+    expect((await resolveActiveResume())!.meta.id).toBe(two.meta.id);
+  });
+
+  // The bug this guards: the popup fell back to the first resume for display
+  // while the fill path returned null, so a populated profile showed a healthy
+  // completion bar next to fills that produced nothing.
+  it('falls back to the first resume when no id is set, and persists it', async () => {
+    await chrome.storage.local.clear();
+    const first = await createResume('one');
+    await createResume('two');
+    await chrome.storage.local.remove('formpilot:activeResumeId');
+    expect((await resolveActiveResume())!.meta.id).toBe(first.meta.id);
+    expect(await getActiveResumeId()).toBe(first.meta.id);
+  });
+
+  it('repairs a dangling id left behind by a deleted resume', async () => {
+    await chrome.storage.local.clear();
+    const keep = await createResume('keep');
+    await setActiveResumeId('does-not-exist');
+    expect((await resolveActiveResume())!.meta.id).toBe(keep.meta.id);
+    expect(await getActiveResumeId()).toBe(keep.meta.id);
+  });
+});
+
+describe('resume-store · deleteResume owns the whole cascade', () => {
+  // The pointer used to be repaired by the Dashboard, so any other caller left
+  // it dangling and two layers each owned half of one invariant.
+  it('repoints the active profile when the active one is deleted', async () => {
+    await chrome.storage.local.clear();
+    const a = await createResume('a');
+    const b = await createResume('b');
+    await setActiveResumeId(a.meta.id);
+    await deleteResume(a.meta.id);
+    expect(await getActiveResumeId()).toBe(b.meta.id);
+    expect((await resolveActiveResume())!.meta.id).toBe(b.meta.id);
+  });
+
+  it('leaves the pointer alone when a different profile is deleted', async () => {
+    await chrome.storage.local.clear();
+    const a = await createResume('a');
+    const b = await createResume('b');
+    await setActiveResumeId(a.meta.id);
+    await deleteResume(b.meta.id);
+    expect(await getActiveResumeId()).toBe(a.meta.id);
+  });
+
+  it('drops the pointer when the last profile goes', async () => {
+    await chrome.storage.local.clear();
+    const only = await createResume('only');
+    await setActiveResumeId(only.meta.id);
+    await deleteResume(only.meta.id);
+    expect(await getActiveResumeId()).toBeNull();
+    expect(await resolveActiveResume()).toBeNull();
+    expect(await listResumes()).toEqual([]);
+  });
+
+  it('never leaves a pointer at a resume that no longer exists', async () => {
+    await chrome.storage.local.clear();
+    const a = await createResume('a');
+    const b = await createResume('b');
+    for (const id of [a.meta.id, b.meta.id]) {
+      await setActiveResumeId(id);
+      await deleteResume(id);
+      const pointer = await getActiveResumeId();
+      const ids = (await listResumes()).map((r) => r.meta.id);
+      if (pointer !== null) expect(ids).toContain(pointer);
+    }
+  });
+});
+
+describe('resume-store · which profile takes over', () => {
+  const olderThenNewer = async () => {
+    await chrome.storage.local.clear();
+    const blank = await createResume('blank');          // created first
+    await new Promise((r) => setTimeout(r, 5));
+    const real = await createResume('real');
+    await new Promise((r) => setTimeout(r, 5));
+    await updateResume(real.meta.id, { basic: { name: '张明远' } });  // worked in
+    return { blank, real };
+  };
+
+  // Storage keeps creation order, so taking the first survivor handed the user
+  // their oldest profile — usually the blank one made before importing. Every
+  // fill then came back almost entirely "missing from your profile", with
+  // nothing on screen saying the active profile had changed.
+  it('after deleting the active profile, adopts the most recently updated one', async () => {
+    const { blank, real } = await olderThenNewer();
+    const third = await createResume('third');
+    await setActiveResumeId(third.meta.id);
+    await deleteResume(third.meta.id);
+    expect(await getActiveResumeId()).toBe(real.meta.id);
+    expect(await getActiveResumeId()).not.toBe(blank.meta.id);
+  });
+
+  it('repairs a dangling pointer to the most recently updated one too', async () => {
+    const { blank, real } = await olderThenNewer();
+    await setActiveResumeId('gone');
+    expect((await resolveActiveResume())!.meta.id).toBe(real.meta.id);
+    expect((await resolveActiveResume())!.meta.id).not.toBe(blank.meta.id);
+  });
+
+  it('still honours an explicit selection', async () => {
+    const { blank } = await olderThenNewer();
+    await setActiveResumeId(blank.meta.id);
+    expect((await resolveActiveResume())!.meta.id).toBe(blank.meta.id);
+  });
+});
+
+describe('resume-store · dropped fields fold into their replacement', () => {
+  // `skills.frameworks` was removed: no board has a field for it, so it could
+  // only sit in the profile dragging the completeness denominator down. The
+  // values are still skills the user typed, so they must not vanish.
+  it('merges a stored frameworks list into tools on read', async () => {
+    await chrome.storage.local.clear();
+    const r = await createResume('legacy');
+    const stored = (await chrome.storage.local.get('formpilot:resumes'))['formpilot:resumes'] as any[];
+    stored[0].skills = { languages: ['Go'], frameworks: ['React', 'Vue'], tools: ['Git'], certificates: [] };
+    await chrome.storage.local.set({ 'formpilot:resumes': stored });
+
+    const read = await getResume(r.meta.id);
+    expect(read!.skills.tools).toEqual(['Git', 'React', 'Vue']);
+    expect((read!.skills as any).frameworks).toBeUndefined();
+    expect(read!.skills.languages).toEqual(['Go']);
+  });
+
+  it('does not duplicate a value already present in tools', async () => {
+    await chrome.storage.local.clear();
+    const r = await createResume('dupe');
+    const stored = (await chrome.storage.local.get('formpilot:resumes'))['formpilot:resumes'] as any[];
+    stored[0].skills = { languages: [], frameworks: ['React'], tools: ['React'], certificates: [] };
+    await chrome.storage.local.set({ 'formpilot:resumes': stored });
+
+    expect((await getResume(r.meta.id))!.skills.tools).toEqual(['React']);
+  });
+
+  it('leaves a resume with no legacy field untouched', async () => {
+    await chrome.storage.local.clear();
+    const r = await createResume('modern');
+    await updateResume(r.meta.id, { skills: { languages: ['Go'], tools: ['Git'], certificates: [] } });
+    expect((await getResume(r.meta.id))!.skills.tools).toEqual(['Git']);
   });
 });

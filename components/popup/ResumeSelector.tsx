@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { MutableRefObject } from 'react';
 import type { Resume } from '@/lib/storage/types';
 import { useI18n } from '@/lib/i18n';
+import { successorAfterDelete } from '@/lib/storage/resume-store';
+import { countFields } from '@/lib/storage/resume-utils';
 
 interface ResumeSelectorProps {
   resumes: Resume[];
@@ -21,12 +22,10 @@ export default function ResumeSelector({
   onRename,
 }: ResumeSelectorProps) {
   const { t } = useI18n();
-  const canDelete = resumes.length > 1;
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Resume | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const confirmTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null> = useRef(null);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -35,24 +34,6 @@ export default function ResumeSelector({
     }
   }, [editingId]);
 
-  // Clear the delete-confirm timer on unmount so no late setState fires.
-  useEffect(() => {
-    return () => {
-      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
-    };
-  }, []);
-
-  function handleDeleteClick(id: string) {
-    if (confirmDeleteId === id) {
-      onDelete(id);
-      setConfirmDeleteId(null);
-      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
-    } else {
-      setConfirmDeleteId(id);
-      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
-      confirmTimerRef.current = setTimeout(() => setConfirmDeleteId(null), 3000);
-    }
-  }
 
   /**
    * Relies on React firing the previous input's onBlur → commit → setState
@@ -73,7 +54,7 @@ export default function ResumeSelector({
   function beginRename(r: Resume) {
     setEditingId(r.meta.id);
     setDraftName(r.meta.name || '');
-    setConfirmDeleteId(null);
+    setPendingDelete(null);
   }
 
   function cancelRename() {
@@ -126,19 +107,14 @@ export default function ResumeSelector({
                 >
                   ✎
                 </button>
-                {canDelete && (
-                  <button
-                    onClick={() => handleDeleteClick(r.meta.id)}
-                    className={`pr-2 pl-0.5 text-xs leading-none transition-colors
-                      ${confirmDeleteId === r.meta.id
-                        ? 'text-red-300 opacity-100 font-bold'
-                        : `opacity-60 hover:opacity-100 ${isActive ? 'text-white' : 'text-gray-400'}`
-                      }`}
-                    title={confirmDeleteId === r.meta.id ? t('resume.delete.confirm') : t('resume.delete')}
-                  >
-                    {confirmDeleteId === r.meta.id ? '?' : '×'}
-                  </button>
-                )}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setPendingDelete(r); }}
+                  className={`pr-2 pl-0.5 text-xs leading-none transition-opacity opacity-60 hover:opacity-100
+                    ${isActive ? 'text-white' : 'text-gray-400'}`}
+                  title={t('resume.delete')}
+                >
+                  ×
+                </button>
               </>
             )}
           </div>
@@ -150,6 +126,94 @@ export default function ResumeSelector({
       >
         {t('resume.new')}
       </button>
+
+      {pendingDelete && (
+        <DeleteDialog
+          resume={pendingDelete}
+          successor={successorAfterDelete(resumes, pendingDelete.meta.id)}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => { onDelete(pendingDelete.meta.id); setPendingDelete(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Deleting a profile destroys work the user cannot get back, so it asks in
+ * words rather than by mode-switching a 12px 「×」 into a 「?」 that silently
+ * reverted after three seconds — a confirmation nobody could read, on a
+ * control nobody could aim at, next to the rename pencil.
+ *
+ * It names the profile, says how much is in it, and names the profile that
+ * takes over, because deleting the active one switches you somewhere else and
+ * that used to happen with nothing on screen saying so.
+ */
+function DeleteDialog({
+  resume,
+  successor,
+  onCancel,
+  onConfirm,
+}: {
+  resume: Resume;
+  successor: Resume | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useI18n();
+  const confirmRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    confirmRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+
+  const { filled } = countFields(resume);
+  const name = resume.meta.name || t('resume.default');
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="w-80 rounded-lg border border-gray-700 bg-gray-900 shadow-xl overflow-hidden"
+      >
+        <div className="px-4 py-3 border-b border-gray-800">
+          <h2 className="text-sm font-semibold text-gray-100">{t('resume.delete.title')}</h2>
+        </div>
+        <div className="px-4 py-3 space-y-2 text-xs leading-relaxed text-gray-300">
+          <p>{t('resume.delete.body', { name, filled })}</p>
+          {successor ? (
+            <p className="text-gray-400">
+              {t('resume.delete.successor', { name: successor.meta.name || t('resume.default') })}
+            </p>
+          ) : (
+            <p className="text-amber-300">{t('resume.delete.last')}</p>
+          )}
+        </div>
+        <div className="px-4 py-3 flex justify-end gap-2 border-t border-gray-800">
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 rounded text-xs text-gray-300 hover:bg-gray-800 transition-colors
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+          >
+            {t('resume.delete.cancel')}
+          </button>
+          <button
+            ref={confirmRef}
+            onClick={onConfirm}
+            className="px-3 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-500
+              transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
+          >
+            {t('resume.delete.confirmBtn')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

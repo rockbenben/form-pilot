@@ -1,8 +1,9 @@
+import type { PatchOf } from './merge-resume-patch';
 import type { FieldCandidate } from '@/lib/capture/candidate';
 
 // ─── Resume Meta ─────────────────────────────────────────────────────────────
 
-export interface ResumeMeta {
+interface ResumeMeta {
   id: string;
   name: string;
   createdAt: number; // Unix ms timestamp
@@ -27,7 +28,25 @@ export interface BasicInfo {
   ethnicity: string;
   politicalStatus: string;
   location: string;
-  willingLocations: string[];
+  /**
+   * When the person first started working, `YYYY-MM`. Chinese boards ask for
+   * this rather than for years of experience, and derive the years from it —
+   * 智联招聘 and BOSS 直聘 both have the field.
+   */
+  workStartDate: string;
+  /**
+   * Present salary, as the user chooses to write it. Kept apart from
+   * `jobPreference.salaryRange`, which is what they are asking for next.
+   */
+  currentSalary: string;
+  /** 在职 / 离职 / 随时到岗 — asked for on every Chinese board. */
+  jobStatus: string;
+  /**
+   * The free-text pitch every Chinese board opens a resume with — 个人优势 on
+   * BOSS, 优势内容 on 智联, 优势亮点 on 猎聘. All three have it and it was the
+   * one major resume section with nowhere to go.
+   */
+  summary: string;
   /** Base64-encoded avatar image */
   avatar: string;
   /** e.g. { github: 'https://...', linkedin: 'https://...' } */
@@ -77,9 +96,14 @@ export interface ProjectEntry {
 
 // ─── Skills ──────────────────────────────────────────────────────────────────
 
+/**
+ * Every board surveyed asks for skills in one field (技能标签 / 技能关键词),
+ * so the schema keeps only the buckets a form can actually receive. A separate
+ * `frameworks` list had nowhere to go and only inflated the completeness
+ * denominator; stored values are folded into `tools` on read.
+ */
 export interface Skills {
   languages: string[];
-  frameworks: string[];
   tools: string[];
   certificates: string[];
 }
@@ -114,20 +138,30 @@ export interface Resume {
   custom: CustomField[];
 }
 
+/**
+ * What callers may send to update a resume.
+ *
+ * `basic` deep-merges (see mergeResumePatch), so a caller may send only the
+ * scalars it changed; every other top-level key shallow-replaces and must be
+ * complete. The signature used to be `Partial<Omit<Resume, 'meta'>>`, which
+ * types `basic` as a whole BasicInfo — a lie, since the debounced field editor
+ * has always sent partial `basic` deltas deliberately.
+ */
+export type ResumePatch = PatchOf<Omit<Resume, 'meta'>>;
+
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
 export interface Settings {
   toolbarPosition: { x: number; y: number };
-  apiKey: string;
-  apiProvider: 'deepseek' | 'openai' | '';
   skipSensitive: boolean;
   /**
-   * Hostnames (suffix match: `mokahr.com` also matches `jobs.mokahr.com`)
-   * where the floating toolbar auto-appears. Pages not in this list stay
-   * dormant unless they have saved drafts/memory or the user triggers fill
-   * from the popup.
+   * 'auto'   — the toolbar appears when the page probes as an application form.
+   * 'manual' — it never appears on its own; the user summons it with the
+   *            keyboard command or the popup.
    */
-  allowedDomains: string[];
+  triggerMode: 'auto' | 'manual';
+  /** Per-site override, suffix-matched. Overrides `triggerMode`. */
+  siteOverrides: Record<string, 'always' | 'never'>;
 }
 
 // ─── Factory & Defaults ──────────────────────────────────────────────────────
@@ -155,7 +189,10 @@ export function createEmptyResume(id: string, name: string): Resume {
       ethnicity: '',
       politicalStatus: '',
       location: '',
-      willingLocations: [],
+      workStartDate: '',
+      currentSalary: '',
+      jobStatus: '',
+      summary: '',
       avatar: '',
       socialLinks: {},
     },
@@ -164,7 +201,6 @@ export function createEmptyResume(id: string, name: string): Resume {
     projects: [],
     skills: {
       languages: [],
-      frameworks: [],
       tools: [],
       certificates: [],
     },
@@ -179,23 +215,9 @@ export function createEmptyResume(id: string, name: string): Resume {
   };
 }
 
-export const DEFAULT_ALLOWED_DOMAINS = [
-  // Chinese recruitment platforms
-  'mokahr.com', 'moka.com', 'zhaopin.com', 'liepin.com', 'zhipin.com',
-  'lagou.com', 'nowcoder.com',
-  // International ATS
-  'myworkday.com', 'myworkdayjobs.com', 'greenhouse.io', 'lever.co',
-  'icims.com', 'taleo.net', 'smartrecruiters.com',
-  // Chinese tech company career sites
-  'hotjob.cn', 'beisen.com', 'feishu.cn',
-];
-
 export const DEFAULT_SETTINGS: Settings = {
   toolbarPosition: { x: 16, y: 80 },
-  apiKey: '',
-  apiProvider: '',
   skipSensitive: true,
-  // Spread so callers can't mutate the DEFAULT_ALLOWED_DOMAINS module export
-  // via a shared-reference bug.
-  allowedDomains: [...DEFAULT_ALLOWED_DOMAINS],
+  triggerMode: 'auto',
+  siteOverrides: {},
 };

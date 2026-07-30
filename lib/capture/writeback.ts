@@ -27,9 +27,7 @@ export function collectWriteBack(items: ScannedItem[]): WriteBackPair[] {
 
 /** Paths whose values are stored as string[] in Resume — comma-split when writing. */
 const ARRAY_SCALAR_PATHS = new Set([
-  'basic.willingLocations',
   'skills.languages',
-  'skills.frameworks',
   'skills.tools',
   'skills.certificates',
   'jobPreference.positions',
