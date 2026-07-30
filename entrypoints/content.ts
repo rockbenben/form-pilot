@@ -2,7 +2,7 @@ import { findAdapter } from '@/lib/engine/adapters/registry';
 import { orchestrateFill } from '@/lib/engine/orchestrator';
 import type { FillResult, FillResultItem } from '@/lib/engine/adapters/types';
 import type { Resume, Settings } from '@/lib/storage/types';
-import { DEFAULT_ALLOWED_DOMAINS, createEmptyResume } from '@/lib/storage/types';
+import { createEmptyResume } from '@/lib/storage/types';
 import type { DraftSnapshot, PageMemoryEntry } from '@/lib/capture/types';
 import type { FormEntry } from '@/lib/storage/form-store';
 import { mountToolbar } from '@/components/toolbar/mount';
@@ -12,7 +12,9 @@ import { restoreFields } from '@/lib/capture/restorer';
 import { scanFields } from '@/lib/engine/scanner';
 import { collectWriteBack } from '@/lib/capture/writeback';
 import { normalizeUrlForDraft, normalizeUrlForMemory } from '@/lib/capture/url-key';
-import { matchesAllowedDomain, safeHostname } from '@/lib/capture/domain-match';
+import { resolveSiteOverride, safeHostname } from '@/lib/capture/domain-match';
+import { probeResumeFields } from '@/lib/engine/probe';
+import { resolveVisibility } from '@/lib/engine/visibility';
 import { normalizeDomain, type FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
 import { makeT, resolveLocale } from '@/lib/i18n';
 import { computeSignatureFor } from '@/lib/capture/signature';
@@ -36,11 +38,9 @@ export default defineContentScript({
     // mostly rich-text editors / comment boxes still pass the activation gate.
     // `[contenteditable]:not([contenteditable="false"])` catches true, empty,
     // and plaintext-only without enumerating each.
-    const hasFormElements =
-      document.querySelectorAll(
-        'input, select, textarea, [contenteditable]:not([contenteditable="false"])',
-      ).length > 3;
-    if (!hasFormElements) return;
+    const FORM_SELECTOR =
+      'input, select, textarea, [contenteditable]:not([contenteditable="false"])';
+    const countFormElements = () => document.querySelectorAll(FORM_SELECTOR).length;
 
     // Load settings
     let settings: Settings | null = null;
@@ -118,7 +118,11 @@ export default defineContentScript({
 
     // ── Fill handler ────────────────────────────────────────────────────────
     async function handleFill(): Promise<FillResult> {
-      const empty: FillResult = { items: [], filled: 0, uncertain: 0, unrecognized: 0 };
+      // `empty: 0` was missing. This object is what a fill returns when it
+      // cannot run, and it travels to the popup, which reads `.empty` for the
+      // 「待补」 count and to decide whether to show the "complete your profile"
+      // hint. Undefined there rendered a NaN-wide bar segment and hid the hint.
+      const empty: FillResult = { items: [], filled: 0, uncertain: 0, empty: 0, unrecognized: 0 };
       // Unmount any pickers from a previous fill before starting a new one.
       for (const p of mountedPickers) { try { p.unmount(); } catch { /* ignore */ } }
       mountedPickers = [];
@@ -417,37 +421,10 @@ export default defineContentScript({
         .catch(() => { /* ignore */ });
     }
 
-    // ── Opt-in gate ─────────────────────────────────────────────────────────
-    // The content script now runs on every http(s) page (so TRIGGER_FILL from
-    // the popup can always reach us), but it stays invisible unless one of:
-    //   1. The page's hostname is in the user's allowedDomains list.
-    //   2. There's a saved draft for this URL.
-    //   3. There's saved page memory for this URL.
-    //   4. The user explicitly invokes fill from the popup (TRIGGER_FILL).
-    const hostname = safeHostname(window.location.href);
-    const allowedDomains = settings?.allowedDomains ?? DEFAULT_ALLOWED_DOMAINS;
-    const domainAllowed = matchesAllowedDomain(hostname, allowedDomains);
-
-    let hasDraft = false;
-    let hasMemory = false;
-    try {
-      const [draftRes, memRes] = await Promise.all([
-        chrome.runtime.sendMessage({
-          type: 'GET_DRAFT',
-          url: normalizeUrlForDraft(window.location.href),
-        }),
-        chrome.runtime.sendMessage({
-          type: 'GET_PAGE_MEMORY',
-          url: normalizeUrlForMemory(window.location.href),
-        }),
-      ]);
-      hasDraft = !!(draftRes?.ok && draftRes.data);
-      hasMemory = !!(memRes?.ok && (memRes.data as PageMemoryEntry[])?.length);
-    } catch { /* ignore — treat as no stored data */ }
-
-    const shouldAutoShow = domainAllowed || hasDraft || hasMemory;
-
     // ── Mount state (lazy) ──────────────────────────────────────────────────
+    // Declared ahead of the opt-in gate below because the gate may call
+    // refreshDraftBadge() (which reads/writes this state) before it mounts
+    // anything.
     let mounted = false;
     let toolbar: { unmount: () => void } | null = null;
     let badge: { unmount: () => void } | null = null;
@@ -455,6 +432,119 @@ export default defineContentScript({
     let cleanupObservers: (() => void) | null = null;
     let mountedPickers: MountedCandidatePicker[] = [];
     let promptedDomainPrefs: Set<string> = new Set();
+
+    // Monotonically increasing token: if a newer refreshDraftBadge started
+    // while this one was mid-await, abandon our work. Prevents two rapid
+    // save-drafts from leaking the first in-flight mount.
+    let badgeRefreshToken = 0;
+
+    // Same pattern for ensureMounted(): if a teardown (or a teardown
+    // followed by a fresh mount) runs while mountToolbar() is mid-await, the
+    // stale call must not resurrect a toolbar the code believes is gone —
+    // or, worse, overwrite a newer one. Bumped on every teardown path.
+    let toolbarMountToken = 0;
+
+    // ── Shared teardown ─────────────────────────────────────────────────────
+    // The toolbar/observer teardown sequence is identical everywhere it
+    // happens; only whether the draft badge also comes down differs. Hiding
+    // for a page ("Hide on this page", the Alt+Shift+F toggle) is not a
+    // statement about the user's saved draft, so those callers pass
+    // `includeBadge: false`. Only "Never on this site" and the storage
+    // listener's 'never' branch pass `true`.
+    function teardownToolbar({ includeBadge }: { includeBadge: boolean }): void {
+      // Must run first: the observer installed by ensureMounted() calls real
+      // autofill on DOM mutations, so leaving it alive after a teardown is a
+      // silent-autofill bug.
+      cleanupObservers?.();
+      cleanupObservers = null;
+      toolbar?.unmount();
+      toolbar = null;
+      mounted = false;
+      // Abandons any in-flight ensureMounted() so it cannot resurrect a
+      // toolbar this teardown just tore down.
+      ++toolbarMountToken;
+      if (includeBadge) {
+        badge?.unmount();
+        badge = null;
+        // Abandons any in-flight refreshDraftBadge() so it cannot remount
+        // the badge after this teardown ran.
+        ++badgeRefreshToken;
+      }
+    }
+
+    // ── Opt-in gate ─────────────────────────────────────────────────────────
+    // The content script runs on every http(s) page so TRIGGER_FILL and
+    // TOGGLE_TOOLBAR can always reach us, but it stays invisible unless the
+    // page actually asks for resume information — or the user says otherwise.
+    // Precedence lives in resolveVisibility(); see lib/engine/visibility.ts.
+    const hostname = safeHostname(window.location.href);
+    // Mutable: these model the currently effective settings for this page.
+    // The storage listener below keeps them in sync, so a settings change in
+    // another tab is reflected the next time runGate() runs or the badge
+    // condition is evaluated — not just at this initial page load.
+    let triggerMode = settings?.triggerMode ?? 'auto';
+    let currentOverride = resolveSiteOverride(hostname, settings?.siteOverrides ?? {});
+
+    /**
+     * Evaluate the gate for the page as it stands right now. Fires the two
+     * storage lookups first and runs the probe while they are in flight — the
+     * probe is synchronous main-thread work, so it costs nothing extra inside
+     * a window we were going to spend on IPC anyway.
+     */
+    async function runGate(): Promise<{ show: boolean; hasDraft: boolean }> {
+      const pending = Promise.all([
+        chrome.runtime.sendMessage({
+          type: 'GET_DRAFT',
+          url: normalizeUrlForDraft(window.location.href),
+        }),
+        chrome.runtime.sendMessage({ type: 'HAS_PROFILE_DATA' }),
+        chrome.runtime.sendMessage({
+          type: 'GET_PAGE_MEMORY',
+          url: normalizeUrlForMemory(window.location.href),
+        }),
+      ]).catch(() => [null, null, null] as const);
+
+      const resumeFieldCount = probeResumeFields(document);
+
+      const [draftRes, profileRes, memRes] = await pending;
+      const hasDraft = !!(draftRes?.ok && draftRes.data);
+      const hasMemory = !!(memRes?.ok && (memRes.data as PageMemoryEntry[])?.length);
+      // A failed lookup must not silence the toolbar for someone whose profile
+      // is fine, so an unusable reply is treated as "has data".
+      const profileHasData = profileRes?.ok ? profileRes.data !== false : true;
+
+      return {
+        show: resolveVisibility({
+          override: currentOverride,
+          triggerMode,
+          hasDraft,
+          hasMemory,
+          resumeFieldCount,
+          profileHasData,
+        }),
+        hasDraft,
+      };
+    }
+
+    // A page can start with no form at all and grow one only once the user
+    // clicks an "edit" affordance — the 猎聘 / 智联 / BOSS resume pages all
+    // render read-only until you do, so at load time they expose zero inputs.
+    // This check used to `return` outright, which also skipped registering the
+    // message listeners further down and left the extension unreachable by
+    // keyboard command or popup on exactly those pages. It now gates only the
+    // auto-show work; everything summonable stays wired up regardless.
+    const pageHasForm = countFormElements() > 3;
+
+    const gate = pageHasForm ? await runGate() : { show: false, hasDraft: false };
+    const shouldAutoShow = gate.show;
+
+    // The draft badge is not governed by resolveVisibility. A draft is the
+    // user's own half-finished application coming back to find them, and it
+    // expires after 30 days — suppressing it risks silent data loss. Only a
+    // 'never' site override silences it.
+    if (gate.hasDraft && currentOverride !== 'never') {
+      await refreshDraftBadge();
+    }
 
     const storageListener = (
       changes: Record<string, chrome.storage.StorageChange>,
@@ -464,21 +554,53 @@ export default defineContentScript({
       if ('formpilot:activeResumeId' in changes || 'formpilot:resumes' in changes) {
         fetchActiveResume().catch(() => { /* ignore */ });
       }
-      // Settings changed in another tab: if the user just added the current
-      // hostname to allowedDomains, mount the toolbar live without a reload.
-      if ('formpilot:settings' in changes && !mounted) {
+      if ('formpilot:settings' in changes) {
         const next = changes['formpilot:settings'].newValue as Partial<Settings> | undefined;
-        const nextDomains = next?.allowedDomains ?? DEFAULT_ALLOWED_DOMAINS;
-        if (matchesAllowedDomain(hostname, nextDomains)) {
+        // Sync the effective-settings bindings before anything below (this
+        // branch's own checks, or a later runGate()) reads them — otherwise
+        // runGate() would keep evaluating resolveVisibility() against the
+        // page-load snapshot forever, and the auto-mode re-probe below would
+        // be permanently dead once triggerMode started out as 'manual'.
+        currentOverride = resolveSiteOverride(hostname, next?.siteOverrides ?? {});
+        triggerMode = next?.triggerMode ?? 'auto';
+
+        // 'never' wins regardless of mount state. The badge has a lifecycle
+        // independent of `mounted` (it can be showing standalone in manual
+        // mode with no toolbar), so it must be torn down here too — not just
+        // when a toolbar happens to be live.
+        if (currentOverride === 'never') {
+          teardownToolbar({ includeBadge: true });
+          return;
+        }
+
+        // Only 'never' tears down a live toolbar. Switching auto → manual
+        // takes effect from the next page load: yanking a toolbar out from
+        // under someone mid-fill is worse than one page of inconsistency.
+        if (mounted) return;
+
+        if (currentOverride === 'always') {
           ensureMounted().catch(() => { /* ignore */ });
+          // Unconditional and idempotent (guarded by its own
+          // `url === badgeUrl && badge` check) — simpler than a second
+          // draft lookup just to decide whether to call it.
+          refreshDraftBadge().catch(() => { /* ignore */ });
+          return;
+        }
+        if (triggerMode === 'auto') {
+          // Re-probe: the page may well qualify now that manual mode is off.
+          // Reuse the hasDraft runGate() already computed instead of a
+          // second lookup, so a draft saved in another tab shows up here
+          // too instead of waiting for a reload.
+          runGate()
+            .then(async (g) => {
+              if (!g.show) return;
+              await ensureMounted();
+              if (g.hasDraft) await refreshDraftBadge();
+            })
+            .catch(() => { /* ignore */ });
         }
       }
     };
-
-    // Monotonically increasing token: if a newer refreshDraftBadge started
-    // while this one was mid-await, abandon our work. Prevents two rapid
-    // save-drafts from leaking the first in-flight mount.
-    let badgeRefreshToken = 0;
 
     async function refreshDraftBadge(): Promise<void> {
       const myToken = ++badgeRefreshToken;
@@ -518,8 +640,11 @@ export default defineContentScript({
           return;
         }
         // If a previous in-flight mount somehow still set `badge`, unmount it
-        // before replacing — defense beyond the token check.
-        badge?.unmount();
+        // before replacing — defense beyond the token check. Read through an
+        // explicitly typed alias: the `badge = null` above narrows it to null
+        // for the rest of this body, and control-flow analysis cannot see that
+        // another invocation may have assigned it across the await.
+        (badge as typeof newBadge | null)?.unmount();
         badge = newBadge;
       } catch { /* ignore */ }
     }
@@ -527,8 +652,9 @@ export default defineContentScript({
     async function ensureMounted(): Promise<void> {
       if (mounted) return;
       mounted = true;
+      const myToken = ++toolbarMountToken;
       await fetchActiveResume(); // prime hasActive for the save menu
-      toolbar = await mountToolbar({
+      const newToolbar = await mountToolbar({
         ctx,
         initialPosition,
         onPositionSave: savePosition,
@@ -537,23 +663,109 @@ export default defineContentScript({
         onWriteBack: handleWriteBack,
         onSaveMemory: handleSaveMemory,
         getHasActiveResume: () => hasActive,
+        onHidePage: () => {
+          teardownToolbar({ includeBadge: false });
+        },
+        onNeverSite: () => {
+          chrome.runtime
+            .sendMessage({ type: 'SET_SITE_OVERRIDE', domain: hostname, value: 'never' })
+            .catch(() => { /* ignore */ });
+          teardownToolbar({ includeBadge: true });
+        },
       });
-      await refreshDraftBadge();
+      // A teardown (or a teardown followed by a fresh ensureMounted()) may
+      // have run while mountToolbar() was mid-await. `!mounted` catches a
+      // plain teardown; the token catches a teardown followed by a newer
+      // mount, which would otherwise let this stale call overwrite it.
+      if (myToken !== toolbarMountToken || !mounted) {
+        newToolbar.unmount();
+        return;
+      }
+      toolbar = newToolbar;
+      // Drop the gate-mode observer (if any) before installing the
+      // fill-oriented one, so a page never runs both.
+      cleanupObservers?.();
       cleanupObservers = observeFormChanges(ctx, handleFill, () => {
         refreshDraftBadge().catch(() => { /* ignore */ });
       });
     }
 
     // Always subscribe to storage changes — even when we haven't mounted —
-    // so adding the current hostname to allowedDomains from Settings mounts
-    // the toolbar live, and resume create/delete keeps hasActive fresh.
+    // so flipping a site override to 'always' (or turning off manual mode)
+    // mounts the toolbar live, and resume create/delete keeps hasActive fresh.
     chrome.storage.onChanged.addListener(storageListener);
 
-    if (shouldAutoShow) await ensureMounted();
+    /**
+     * Watch for a form that only appears after the user acts.
+     *
+     * Read-only resume pages render their fields when an "edit" control is
+     * clicked, so at load there is nothing to gate on. A MutationObserver would
+     * catch it, but running one on every formless page in the browser is a poor
+     * trade — a click listener costs nothing until the user actually clicks,
+     * and "user clicked something" is precisely the signal that precedes the
+     * form appearing.
+     *
+     * Bounded: stops after the first successful mount, and after 15 fruitless
+     * re-checks so a click-heavy page cannot keep re-probing forever.
+     */
+    function watchForLateForm(): () => void {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let attempts = 0;
+      const onClick = () => {
+        if (mounted || attempts >= 15) return;
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          if (mounted || countFormElements() <= 3) return;
+          attempts += 1;
+          runGate()
+            .then((g) => {
+              if (g.hasDraft && currentOverride !== 'never') refreshDraftBadge().catch(() => {});
+              if (g.show) return ensureMounted();
+            })
+            .catch(() => { /* ignore */ });
+        }, 600);
+      };
+      document.addEventListener('click', onClick, { capture: true, passive: true });
+      return () => {
+        document.removeEventListener('click', onClick, { capture: true });
+        clearTimeout(timer);
+      };
+    }
+
+    let cleanupLateFormWatcher: (() => void) | null = null;
+
+    if (shouldAutoShow) {
+      await ensureMounted();
+    } else if (triggerMode === 'auto' && currentOverride !== 'never') {
+      if (pageHasForm) {
+        // Not showing yet, but this may be an SPA that navigates into a real
+        // application form without a reload. Watch for that and re-run the gate.
+        // Once mounted, ensureMounted() swaps in the fill-oriented observer.
+        cleanupObservers = observeFormChanges(
+          ctx,
+          () => {
+            runGate()
+              .then((g) => { if (g.show) return ensureMounted(); })
+              .catch(() => { /* ignore */ });
+          },
+          () => {
+            runGate()
+              .then((g) => {
+                if (g.hasDraft && currentOverride !== 'never') refreshDraftBadge().catch(() => {});
+                if (g.show) return ensureMounted();
+              })
+              .catch(() => { /* ignore */ });
+          },
+          { maxFormChangeFires: 20 },
+        );
+      } else {
+        cleanupLateFormWatcher = watchForLateForm();
+      }
+    }
 
     // ── TRIGGER_FILL listener — always on (even before mount) ──────────────
     const messageListener = (
-      message: { type?: string },
+      message: { type?: string; save?: 'draft' | 'writeback' | 'memory' },
       _sender: chrome.runtime.MessageSender,
       sendResponse: (response: unknown) => void,
     ): true | void => {
@@ -562,8 +774,44 @@ export default defineContentScript({
           // Lazy-mount so the user can use the save menu after a popup fill.
           await ensureMounted();
           const result = await handleFill();
-          sendResponse({ ok: true, data: result });
+          // `items` carries live Element references, which do not survive
+          // serialization — send only the counts the popup actually renders.
+          sendResponse({
+            ok: true,
+            data: {
+              filled: result.filled,
+              uncertain: result.uncertain,
+              empty: result.empty,
+              unrecognized: result.unrecognized,
+            },
+          });
         })().catch(() => sendResponse({ ok: false }));
+        return true;
+      }
+      if (message?.type === 'TRIGGER_SAVE') {
+        // Same three actions as the toolbar's 💾 menu, reachable from the popup
+        // so they do not require the toolbar to be on screen.
+        (async () => {
+          const run =
+            message.save === 'draft' ? handleSaveDraft
+            : message.save === 'writeback' ? handleWriteBack
+            : message.save === 'memory' ? handleSaveMemory
+            : null;
+          if (!run) { sendResponse({ ok: false }); return; }
+          const { ok, msg } = await run();
+          sendResponse({ ok, msg });
+        })().catch(() => sendResponse({ ok: false }));
+        return true;
+      }
+      if (message?.type === 'TOGGLE_TOOLBAR') {
+        // Summoning shows the controls; it does not fill. Filling stays an
+        // explicit click, which also makes the command safe to press twice.
+        if (mounted) {
+          teardownToolbar({ includeBadge: false });
+        } else {
+          ensureMounted().catch(() => { /* ignore */ });
+        }
+        sendResponse({ ok: true });
         return true;
       }
     };
@@ -571,6 +819,7 @@ export default defineContentScript({
 
     ctx.onInvalidated(() => {
       cleanupObservers?.();
+      cleanupLateFormWatcher?.();
       toolbar?.unmount();
       badge?.unmount();
       for (const p of mountedPickers) { try { p.unmount(); } catch { /* ignore */ } }
@@ -630,15 +879,22 @@ function paintDraftHighlights(elements: HTMLElement[]): void {
 
 function observeFormChanges(
   ctx: InstanceType<typeof ContentScriptContext>,
-  onFill: () => void,
+  onFormChange: () => void,
   onUrlChange?: (newUrl: string) => void,
+  opts?: { maxFormChangeFires?: number },
 ): () => void {
   let lastUrl = window.location.href;
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  // Bounded because an unmounted gate re-probes on every fire. A page that
+  // churns its DOM forever must not keep us probing forever. Reset on URL
+  // change, which is the reliable SPA signal.
+  const maxFires = opts?.maxFormChangeFires ?? Infinity;
+  let fires = 0;
 
   const formSelector =
     'input, select, textarea, [contenteditable]:not([contenteditable="false"])';
   const mutationObserver = new MutationObserver((mutations) => {
+    if (fires >= maxFires) return;
     const hasNewFormElements = mutations.some((m) =>
       Array.from(m.addedNodes).some(
         (node) =>
@@ -649,7 +905,8 @@ function observeFormChanges(
     if (hasNewFormElements) {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        onFill();
+        fires += 1;
+        onFormChange();
       }, 800);
     }
   });
@@ -663,6 +920,7 @@ function observeFormChanges(
     const currentUrl = window.location.href;
     if (currentUrl !== lastUrl) {
       lastUrl = currentUrl;
+      fires = 0;
       const highlighted = document.querySelectorAll<HTMLElement>(
         '[data-formpilot-status]',
       );
@@ -673,7 +931,7 @@ function observeFormChanges(
       onUrlChange?.(currentUrl);
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        onFill();
+        onFormChange();
       }, 800);
     }
   }, 1000);

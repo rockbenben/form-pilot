@@ -4,10 +4,27 @@ export default defineBackground(() => {
     handleMessage(message).then(sendResponse);
     return true;
   });
+
+  chrome.commands?.onCommand.addListener(async (command) => {
+    if (command !== 'toggle-toolbar') return;
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id == null) return;
+    // Pages with no content script (chrome://, the Web Store) reject here.
+    // Nothing to do and nothing worth surfacing.
+    chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_TOOLBAR' }).catch(() => {});
+  });
 });
 
 async function handleMessage(message: { type: string; [key: string]: unknown }) {
-  const { getResume, getActiveResumeId, updateResume } = await import('@/lib/storage/resume-store');
+  // getActiveResumeId was missing from this list while nine handlers below
+  // called it, so it resolved as a free global and every one of them threw
+  // ReferenceError. handleMessage(...).then(sendResponse) never fires on a
+  // rejection, so the port just closed: the caller's sendMessage resolved to
+  // undefined and the UI treated it as "nothing came back". Adding a phone
+  // number in the Dashboard, pinning one, writing a page back to the profile
+  // and every per-domain candidate preference had been silently doing nothing.
+  const { getResume, updateResume, resolveActiveResume, getActiveResumeId } =
+    await import('@/lib/storage/resume-store');
   const { getSettings, updateSettings } = await import('@/lib/storage/settings-store');
   const draftStore = await import('@/lib/storage/draft-store');
   const memStore = await import('@/lib/storage/page-memory-store');
@@ -15,11 +32,17 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
   const { applyWriteback } = await import('@/lib/capture/writeback');
 
   switch (message.type) {
-    case 'GET_ACTIVE_RESUME': {
-      const id = await getActiveResumeId();
-      if (!id) return { ok: true, data: null };
-      return { ok: true, data: await getResume(id) };
+    // Just a boolean for the visibility gate. The gate runs on every page load
+    // and only needs to know whether a fill could produce anything, so it must
+    // not ship a whole profile across the boundary to find that out.
+    case 'HAS_PROFILE_DATA': {
+      const { countFields } = await import('@/lib/storage/resume-utils');
+      const active = await resolveActiveResume();
+      return { ok: true, data: active ? countFields(active).filled > 0 : false };
     }
+
+    case 'GET_ACTIVE_RESUME':
+      return { ok: true, data: await resolveActiveResume() };
 
     // Single round-trip used by content.ts::handleFill. Folds what would
     // otherwise be 3 separate chrome.runtime.sendMessage calls
@@ -29,11 +52,14 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
         memoryUrl?: string;
         pageDomain?: string;
       };
-      const id = await getActiveResumeId();
       const domainPrefsStore = await import('@/lib/storage/domain-prefs-store');
       const profileDomainPrefsStore = await import('@/lib/storage/profile-domain-prefs-store');
-      const [resume, memory, formEntries, domainPrefs, profileDomainPrefs] = await Promise.all([
-        id ? getResume(id) : Promise.resolve(null),
+      // Resolve first — the per-resume domain prefs are keyed by the id this
+      // returns, and it repairs an absent/dangling selection rather than
+      // handing the fill an empty profile.
+      const resume = await resolveActiveResume();
+      const id = resume?.meta.id ?? null;
+      const [memory, formEntries, domainPrefs, profileDomainPrefs] = await Promise.all([
         memoryUrl ? memStore.getPageMemory(memoryUrl) : Promise.resolve([]),
         formStore.listFormEntries(),
         domainPrefsStore.listFieldDomainPrefs(),
@@ -53,6 +79,19 @@ async function handleMessage(message: { type: string; [key: string]: unknown }) 
     case 'SAVE_TOOLBAR_POSITION': {
       const position = message.position as { x: number; y: number };
       await updateSettings({ toolbarPosition: position });
+      return { ok: true, data: null };
+    }
+    case 'SET_SITE_OVERRIDE': {
+      const { domain, value } = (message as unknown) as {
+        domain?: string;
+        value?: 'always' | 'never' | null;
+      };
+      if (!domain) return { ok: false, data: null };
+      const current = await getSettings();
+      const next = { ...current.siteOverrides };
+      if (value === null || value === undefined) delete next[domain];
+      else next[domain] = value;
+      await updateSettings({ siteOverrides: next });
       return { ok: true, data: null };
     }
 

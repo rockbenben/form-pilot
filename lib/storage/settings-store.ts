@@ -1,49 +1,86 @@
 import { type Settings, DEFAULT_SETTINGS } from './types';
 
 const SETTINGS_KEY = 'formpilot:settings';
-const API_KEY_KEY = 'formpilot:apiKey';
 
 /**
- * Return stored settings, falling back to defaults for any missing fields.
- *
- * Non-sensitive settings are read from chrome.storage.local (persists across
- * browser restarts). The API key is read from chrome.storage.session (cleared
- * when the browser closes), limiting its exposure window.
+ * The domain whitelist FormPilot used to ship before the resume-field probe
+ * replaced it. Kept only so the migration can tell a user's own additions from
+ * our former defaults. Do not extend.
  */
-export async function getSettings(): Promise<Settings> {
-  const [localResult, sessionResult] = await Promise.all([
-    chrome.storage.local.get(SETTINGS_KEY),
-    chrome.storage.session?.get(API_KEY_KEY).catch(() => ({})) ?? Promise.resolve({}),
-  ]);
-  const base = (localResult[SETTINGS_KEY] as Partial<Settings> | undefined) ?? {};
-  const apiKey = (sessionResult as Record<string, string>)[API_KEY_KEY] ?? '';
-  const merged: Settings = { ...DEFAULT_SETTINGS, ...base, apiKey };
-  // Always hand callers a fresh array so ad-hoc mutations on
-  // settings.allowedDomains never touch the DEFAULT export or the
-  // in-memory stored snapshot.
-  return { ...merged, allowedDomains: [...merged.allowedDomains] };
+const LEGACY_DEFAULT_DOMAINS = [
+  'mokahr.com', 'moka.com', 'zhaopin.com', 'liepin.com', 'zhipin.com',
+  'lagou.com', 'nowcoder.com',
+  'myworkday.com', 'myworkdayjobs.com', 'greenhouse.io', 'lever.co',
+  'icims.com', 'taleo.net', 'smartrecruiters.com',
+  'hotjob.cn', 'beisen.com', 'feishu.cn',
+] as const;
+
+/**
+ * Fold a legacy `allowedDomains` list into `siteOverrides`.
+ *
+ * Only domains the user added themselves survive — the entries we shipped as
+ * defaults encoded a guess that the resume-field probe now makes better, so
+ * they are discarded. Returns the migrated object, or null when there is
+ * nothing to do.
+ */
+function migrateAllowedDomains(base: Partial<Settings>): Partial<Settings> | null {
+  const legacy = (base as { allowedDomains?: unknown }).allowedDomains;
+  if (!Array.isArray(legacy)) return null;
+  const shipped = new Set<string>(LEGACY_DEFAULT_DOMAINS.map((d) => d.toLowerCase()));
+  const overrides: Record<string, 'always' | 'never'> = { ...(base.siteOverrides ?? {}) };
+  for (const raw of legacy) {
+    const d = String(raw).trim().replace(/^\.+/, '').toLowerCase();
+    if (!d || shipped.has(d)) continue;
+    // A deliberate override the user already set wins over the inferred one.
+    if (d in overrides) continue;
+    overrides[d] = 'always';
+  }
+  const { allowedDomains: _legacy, ...rest } = base as Partial<Settings> & { allowedDomains?: unknown };
+  return { ...rest, siteOverrides: overrides };
 }
 
-/**
- * Shallow-merge a partial settings object and persist the result.
- *
- * The API key is stored in chrome.storage.session; everything else goes to
- * chrome.storage.local.
- */
-export async function updateSettings(patch: Partial<Settings>): Promise<Settings> {
-  const current = await getSettings();
-  const updated: Settings = { ...current, ...patch };
+/** Return stored settings, falling back to defaults for any missing fields. */
+export async function getSettings(): Promise<Settings> {
+  const localResult = await chrome.storage.local.get(SETTINGS_KEY);
+  let base = (localResult[SETTINGS_KEY] as Partial<Settings> | undefined) ?? {};
 
-  // Store API key in session storage (cleared on browser close)
-  if ('apiKey' in patch) {
-    if (chrome.storage.session) {
-      await chrome.storage.session.set({ [API_KEY_KEY]: updated.apiKey });
+  // Lazy migration. A failure here must never block startup — worst case the
+  // user re-adds a site override by hand.
+  try {
+    const migrated = migrateAllowedDomains(base);
+    if (migrated) {
+      base = migrated;
+      await chrome.storage.local.set({ [SETTINGS_KEY]: base });
     }
+  } catch {
+    /* ignore — treat as if there were no legacy field */
   }
 
-  // Store everything except the API key in local storage
-  const { apiKey: _apiKey, ...localSettings } = updated;
-  await chrome.storage.local.set({ [SETTINGS_KEY]: localSettings });
+  const merged: Settings = { ...DEFAULT_SETTINGS, ...base };
+  // Hand callers a fresh object so ad-hoc mutations never touch the DEFAULT
+  // export or the in-memory stored snapshot.
+  return { ...merged, siteOverrides: { ...merged.siteOverrides } };
+}
+
+/** Shallow-merge a partial settings object and persist the result. */
+export async function updateSettings(patch: Partial<Settings>): Promise<Settings> {
+  const current = await getSettings();
+  let updated: Settings = { ...current, ...patch };
+
+  // A patch may still carry a legacy `allowedDomains` field — e.g. a caller
+  // that read stale pre-migration storage before writing it back. Re-run the
+  // same migration getSettings() runs so it's folded into siteOverrides
+  // immediately instead of being persisted raw. Must never block an update.
+  try {
+    const migrated = migrateAllowedDomains(updated);
+    if (migrated) {
+      updated = migrated as Settings;
+    }
+  } catch {
+    /* ignore — treat as if there were no legacy field */
+  }
+
+  await chrome.storage.local.set({ [SETTINGS_KEY]: updated });
 
   return updated;
 }

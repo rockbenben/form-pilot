@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import FloatingToolbar from './FloatingToolbar';
 import ResultBubble from './ResultBubble';
+import CloseMenu from './CloseMenu';
 import SaveMenu from '@/components/capture/SaveMenu';
 import ToolbarToast from '@/components/capture/ToolbarToast';
 import type { FillResult } from '@/lib/engine/adapters/types';
@@ -16,6 +17,8 @@ interface ToolbarAppProps {
   onWriteBack: () => Promise<{ ok: boolean; msg: string }>;
   onSaveMemory: () => Promise<{ ok: boolean; msg: string }>;
   getHasActiveResume: () => boolean;
+  onHidePage: () => void;
+  onNeverSite: () => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
 }
 
@@ -27,6 +30,8 @@ function ToolbarApp({
   onWriteBack,
   onSaveMemory,
   getHasActiveResume,
+  onHidePage,
+  onNeverSite,
   t,
 }: ToolbarAppProps) {
   const [pos, setPos] = useState(initialPosition);
@@ -34,6 +39,7 @@ function ToolbarApp({
   const [fillResult, setFillResult] = useState<FillResult | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const handlePositionChange = useCallback(
@@ -68,8 +74,12 @@ function ToolbarApp({
     setToast(msg);
   }
 
+  // Denominator is the resume fields FormPilot recognized on this page, NOT
+  // every input the page happens to contain. Counting `unrecognized` in here
+  // meant a page's search box, consent checkbox and captcha all inflated it,
+  // so a complete fill still read as "3/20".
   const total = fillResult
-    ? fillResult.filled + fillResult.uncertain + fillResult.unrecognized
+    ? fillResult.filled + fillResult.uncertain + fillResult.empty
     : 0;
 
   const wrapperStyle: React.CSSProperties = {
@@ -96,8 +106,10 @@ function ToolbarApp({
           filling={filling}
           fillResult={fillResult ? { filled: fillResult.filled, total } : null}
           onToggleResult={() => setShowResult((v) => !v)}
-          onToggleSaveMenu={() => setMenuOpen((v) => !v)}
+          onToggleSaveMenu={() => setMenuOpen((v) => { const next = !v; if (next) setCloseOpen(false); return next; })}
           saveMenuOpen={menuOpen}
+          onToggleCloseMenu={() => setCloseOpen((v) => { const next = !v; if (next) setMenuOpen(false); return next; })}
+          closeMenuOpen={closeOpen}
           t={t}
         />
         {menuOpen && (
@@ -108,6 +120,14 @@ function ToolbarApp({
             onWriteBack={() => runSave(onWriteBack)}
             onSaveMemory={() => runSave(onSaveMemory)}
             onClose={() => setMenuOpen(false)}
+          />
+        )}
+        {closeOpen && (
+          <CloseMenu
+            t={t}
+            onHidePage={() => { setCloseOpen(false); onHidePage(); }}
+            onNeverSite={() => { setCloseOpen(false); onNeverSite(); }}
+            onClose={() => setCloseOpen(false)}
           />
         )}
       </div>
@@ -124,6 +144,8 @@ export interface ToolbarMountOptions {
   onWriteBack: () => Promise<{ ok: boolean; msg: string }>;
   onSaveMemory: () => Promise<{ ok: boolean; msg: string }>;
   getHasActiveResume: () => boolean;
+  onHidePage: () => void;
+  onNeverSite: () => void;
 }
 
 /**
@@ -156,6 +178,8 @@ export async function mountToolbar(options: ToolbarMountOptions): Promise<{ unmo
           onWriteBack={options.onWriteBack}
           onSaveMemory={options.onSaveMemory}
           getHasActiveResume={options.getHasActiveResume}
+          onHidePage={options.onHidePage}
+          onNeverSite={options.onNeverSite}
           t={t}
         />,
       );

@@ -9,6 +9,8 @@ interface FloatingToolbarProps {
   onToggleResult: () => void;
   onToggleSaveMenu: () => void;
   saveMenuOpen: boolean;
+  onToggleCloseMenu: () => void;
+  closeMenuOpen: boolean;
   t: (key: string) => string;
 }
 
@@ -20,6 +22,8 @@ export default function FloatingToolbar({
   onToggleResult,
   onToggleSaveMenu,
   saveMenuOpen,
+  onToggleCloseMenu,
+  closeMenuOpen,
   t,
 }: FloatingToolbarProps) {
   const [dragging, setDragging] = useState(false);
@@ -147,6 +151,7 @@ export default function FloatingToolbar({
           outline: 'none',
           whiteSpace: 'nowrap',
         }}
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           onToggleSaveMenu();
@@ -154,6 +159,26 @@ export default function FloatingToolbar({
         title={t('toolbar.save')}
       >
         &#x1F4BE;
+      </button>
+      <button
+        style={{
+          background: 'none',
+          border: 'none',
+          color: closeMenuOpen ? '#fff' : '#9ca3af',
+          fontSize: '14px',
+          lineHeight: 1,
+          padding: '6px 4px',
+          cursor: 'pointer',
+          outline: 'none',
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleCloseMenu();
+        }}
+        title={t('toolbar.close')}
+      >
+        &#x2715;
       </button>
     </div>
   );

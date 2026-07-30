@@ -6,5 +6,9 @@
   "extensionDescription": {
     "message": "One-click resume autofill. Remembers every answer you type and refills it on the next job form. Works on any ATS; data stays local.",
     "description": "Extension description shown in chrome://extensions and Chrome Web Store."
+  },
+  "commandToggleToolbar": {
+    "message": "Show / hide the FormPilot toolbar",
+    "description": "Keyboard shortcut description shown in chrome://extensions/shortcuts."
   }
 }

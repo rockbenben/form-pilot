@@ -6,5 +6,9 @@
   "extensionDescription": {
     "message": "一键投简历，答过的问题跨站自动复填。适配常见 ATS 表单与自定义控件，数据全部保存在本地浏览器，不上云不联网。",
     "description": "扩展描述，显示在 chrome://extensions 和 Chrome Web Store。"
+  },
+  "commandToggleToolbar": {
+    "message": "显示 / 隐藏 FormPilot 工具条",
+    "description": "快捷键说明，显示在 chrome://extensions/shortcuts。"
   }
 }
