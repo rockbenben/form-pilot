@@ -228,15 +228,42 @@ async function fillCustomSelect(el: Element, value: string): Promise<boolean> {
     '[class*="dropdown"] li',
   ];
 
+  /**
+   * Is this option actually on screen?
+   *
+   * Ant Design leaves a closed dropdown's panel in the DOM with
+   * `display: none`, so a page of selects accumulates stale panels. Querying
+   * the whole document and taking the first textual hit meant a previously
+   * opened select's option got clicked instead of this one's — the wrong field
+   * changed, and the one being filled did not.
+   */
+  const isVisible = (opt: Element): boolean => {
+    let n: Element | null = opt;
+    while (n && n !== doc.documentElement) {
+      const st = (n as HTMLElement).style;
+      if (st && (st.display === 'none' || st.visibility === 'hidden')) return false;
+      if (n.getAttribute?.('aria-hidden') === 'true') return false;
+      if (typeof doc.defaultView?.getComputedStyle === 'function') {
+        const cs = doc.defaultView.getComputedStyle(n as HTMLElement);
+        if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+      }
+      n = n.parentElement;
+    }
+    return true;
+  };
+
   for (const selector of overlaySelectors) {
-    const options = Array.from(doc.querySelectorAll(selector));
+    const options = Array.from(doc.querySelectorAll(selector)).filter(isVisible);
     if (options.length === 0) continue;
 
-    const match = options.find(
-      (opt) =>
-        opt.textContent?.trim().toLowerCase() === lowerValue ||
-        opt.textContent?.trim().toLowerCase().includes(lowerValue)
-    );
+    const text = (opt: Element) => opt.textContent?.trim().toLowerCase() ?? '';
+
+    // Exact before substring, across the WHOLE option list. `find` with an
+    // `||` returned whichever came first in DOM order, so 「上海周边」 sitting
+    // above 「上海」 won the city picker.
+    const match =
+      options.find((opt) => text(opt) === lowerValue) ??
+      options.find((opt) => text(opt).includes(lowerValue));
 
     if (match) {
       match.dispatchEvent(new MouseEvent('click', { bubbles: true }));

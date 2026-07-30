@@ -1,0 +1,116 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Job-board control strings</title>
+<!--
+  Every label, placeholder and control here is copied verbatim from a live form
+  on 猎聘, 智联招聘 or BOSS 直聘 during the field survey — see
+  docs/job-board-fields.md. It exists so the whole matcher can be exercised
+  end to end against what those boards actually render, without touching
+  anyone's real resume.
+
+  Two things it must prove, beyond filling the right fields:
+    - the site-wide search box stays empty
+    - the privacy and classification checkboxes stay unticked
+-->
+<style>
+  body { font: 14px/1.6 system-ui; max-width: 760px; margin: 24px auto; padding: 0 16px; }
+  fieldset { border: 1px solid #ccc; margin: 0 0 18px; padding: 12px 16px; }
+  legend { font-weight: 600; }
+  label { display: block; margin-top: 8px; font-size: 13px; color: #333; }
+  input[type=text], input[type=search], textarea { width: 100%; box-sizing: border-box; }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+</style>
+<body>
+  <h1>Job-board control strings</h1>
+
+  <!-- 智联's site header. Must never be filled. -->
+  <input type="search" placeholder="搜索职位、公司" id="siteSearch">
+
+  <fieldset>
+    <legend>个人信息</legend>
+    <label for="f_name">姓名:</label><input type="text" id="f_name">
+    <label for="f_birth">出生年月:</label><input type="text" id="f_birth">
+    <label for="f_workstart">参加工作时间:</label><input type="text" id="f_workstart">
+    <label for="f_phone">电话</label><input type="text" id="f_phone" placeholder="请输入您的手机号">
+    <label for="f_mail">邮箱 (选填)</label><input type="text" id="f_mail" placeholder="用于接收面试邮件">
+    <label for="f_wechat">微信号</label><input type="text" id="f_wechat" placeholder="请输入您的微信号">
+    <label for="f_status">目前状态</label><input type="text" id="f_status">
+    <label for="f_cursal">当前月薪</label><input type="text" id="f_cursal">
+    <label for="f_summary">个人优势</label><textarea id="f_summary" rows="2"></textarea>
+    <label><input type="checkbox" id="f_secret"> 薪资显示为保密</label>
+    <label><input type="checkbox" id="f_mrms"> 显示先生/女士</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>求职意向</legend>
+    <label for="f_poscat">搜索职位类别</label><input type="text" id="f_poscat">
+    <label for="f_ind">搜索行业类别或产品词</label><input type="text" id="f_ind">
+    <label for="f_expsal">期望月薪</label><input type="text" id="f_expsal">
+    <label for="f_city">搜索城市名/区县</label><input type="text" id="f_city">
+  </fieldset>
+
+  <fieldset>
+    <legend>工作经历</legend>
+    <label for="w_comp">公司名称</label><input type="text" id="w_comp">
+    <label for="w_title">职位名称</label><input type="text" id="w_title">
+    <label for="w_dept">所属部门（选填）</label><input type="text" id="w_dept">
+    <!-- 智联 gives BOTH halves of the range the label 在职时间 and puts the
+         start/end distinction in each input's own placeholder. The third
+         control is the 至今 toggle and must stay unticked. -->
+    <div class="row">
+      <div><label for="w_start">在职时间</label><input type="text" id="w_start" placeholder="入职时间"></div>
+      <div><label for="w_end">在职时间</label><input type="text" id="w_end" placeholder="离职时间"></div>
+    </div>
+    <label><input type="checkbox" id="w_now"> 在职时间</label>
+    <label for="w_salary_now">当前月薪</label><input type="text" id="w_salary_now" placeholder="请输入当前薪资（选填)">
+    <label for="w_duty">职责业绩</label><textarea id="w_duty" rows="2"></textarea>
+    <label for="w_ach">工作业绩</label><textarea id="w_ach" rows="2"></textarea>
+    <label><input type="checkbox" id="w_intern"> 本经历是实习经历</label>
+    <label><input type="checkbox" id="w_hide"> 对该公司隐藏我的简历</label>
+    <label><input type="checkbox" id="w_block"> 对该公司屏蔽我的简历</label>
+  </fieldset>
+
+  <fieldset>
+    <legend>项目经历</legend>
+    <label for="p_name">项目名称</label><input type="text" id="p_name">
+    <label for="p_role">项目职务</label><input type="text" id="p_role">
+    <label for="p_desc">项目描述</label><textarea id="p_desc" rows="2"></textarea>
+    <label for="p_duty">项目职责</label><textarea id="p_duty" rows="2"></textarea>
+    <label for="p_ach">项目业绩</label><textarea id="p_ach" rows="2"></textarea>
+    <!-- 智联: one shared 项目时间 label over both ends, plus its 至今 toggle. -->
+    <div class="row">
+      <div><label for="p_start">项目时间</label><input type="text" id="p_start" placeholder="选择开始时间"></div>
+      <div><label for="p_end">项目时间</label><input type="text" id="p_end" placeholder="选择结束时间"></div>
+    </div>
+    <label><input type="checkbox" id="p_now"> 项目时间</label>
+    <!-- 猎聘: no label at all on either end. Only the surrounding project
+         fields can say these are project dates rather than education ones. -->
+    <div class="row">
+      <div><input type="text" id="p_start_bare" placeholder="开始时间"></div>
+      <div><input type="text" id="p_end_bare" placeholder="结束时间"></div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>教育经历</legend>
+    <label for="e_school">毕业院校</label><input type="text" id="e_school">
+    <label for="e_degree">学历</label><input type="text" id="e_degree">
+    <label for="e_major">专业</label><input type="text" id="e_major">
+    <!-- 智联 words the education range 在校时间 / 入学时间 / 毕业时间. -->
+    <div class="row">
+      <div><label for="e_start">在校时间</label><input type="text" id="e_start" placeholder="入学时间"></div>
+      <div><label for="e_end">在校时间</label><input type="text" id="e_end" placeholder="毕业时间"></div>
+    </div>
+    <!-- 猎聘 uses the same bare wording here as in the work and project
+         modals; only the neighbours distinguish them. -->
+    <div class="row">
+      <div><input type="text" id="e_start_bare" placeholder="开始时间"></div>
+      <div><input type="text" id="e_end_bare" placeholder="结束时间"></div>
+    </div>
+    <label for="e_skill">专业技能</label><input type="text" id="e_skill">
+    <label><input type="checkbox" id="e_tongzhao"> 是否统招</label>
+    <!-- A yes/no. Filling it would type 「本科」 into a checkbox. -->
+    <label><input type="checkbox" id="e_cert"> 学位证书：有无</label>
+  </fieldset>
+</body>

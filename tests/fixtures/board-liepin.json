@@ -1,0 +1,8 @@
+{"basicInfo":["~请填写~~~~realName~text","显示先生/女士~~~~~~checkbox","~月薪（选填）~~~~nowSalary~text","~月数（选填）~~~~nowSalaryMonths~text","薪资显示为保密~~~~~~checkbox","上海~~~~~rc_select_46~search","出生日期~请选择~~1987年01月~~birthday~text","目前状态~~~~~workStatusCode~search","政治面貌~~~~~politicalStatusCode~search","手机号码~请选择~~~~~text","~请选择~~2012年08月~~~text","邮箱~用于接收面试邮件~~~~~text","~~~~~rc_select_49~search","微信号~请填写微信号~~~~wechat~text"],
+"selfAssess":["~请简要描述你的职业优势，最少输入10个字~~~~selfAssess~textarea"],
+"jobWant":["产品经理~~~~~~text","上海~~~~~rc_select_50~search","~~~~~rc_select_51~search","全部行业~~~~~rc_select_52~search","~~~~~wantSalaryLow~search","~~~~~wantSalaryHigh~search","~~~~~wantSalaryMonths~search"],
+"workExp":["~~~~~rc_select_62~search","广告/公关/会展~~~~~rc_select_63~search","~开始时间~~2023年03月~~~text","~结束时间~~至今~~~text","~~~~~rc_select_64~search","AI产品经理~~~~~~text","职责业绩~请填写您的职责业绩，90%的招聘方会通过职责业绩了解您的工作能力进而决定面试几率。~~~~duty~textarea","本段经历是实习经历~~~~~workType~checkbox","对该公司屏蔽我的简历~~~~~shieldComp~checkbox"],
+"projectExp":["项目名称~请填写~~~~name~text","~开始时间~~2026年06月~~~text","~结束时间~~至今~~~text","公司名称~~~~~compName~search","项目职务~请填写~~~~title~text","项目描述~描述该项目，展示你的项目经验立刻打动招聘方~~~~desc~textarea","项目职责~描述你在项目中的职责~~~~duty~textarea","项目业绩~描述你的项目业绩~~~~achievement~textarea"],
+"eduExp":["~~~~~rc_select_86~search","~~~~~degree~search","是否统招~~~~~~checkbox","~~~~~rc_select_88~search","~开始时间~~2008年09月~~~text","~结束时间~~2012年06月~~~text","在校经历~1. 在校担任职务...~~~~experience~textarea"],
+"labels":["最多可选10项~请输入技能关键词~~~~~text"],
+"language":["语言~~~~~code~search"]}

@@ -9,7 +9,21 @@ export type InputType =
   | 'contenteditable';
 
 export type FillSource = 'adapter' | 'heuristic' | 'ai' | 'memory' | 'form';
-export type FillStatus = 'filled' | 'uncertain' | 'unrecognized';
+/**
+ * - `filled`        value written, high confidence
+ * - `uncertain`     value written, but matched on a weaker signal
+ * - `empty`         field WAS recognized as a resume field, but the profile /
+ *                   memory had nothing to put in it. The user fixes this by
+ *                   completing their profile — it is not a matching failure.
+ * - `unrecognized`  either no resume field matched, or one matched and the
+ *                   write itself failed (read-only input, exotic widget).
+ *                   Nothing the user can do from their profile.
+ *
+ * `empty` exists because collapsing it into `unrecognized` made a blank
+ * profile look identical to a broken matcher — the toolbar reported "❌ 姓名"
+ * for a field it had recognized perfectly well.
+ */
+export type FillStatus = 'filled' | 'uncertain' | 'empty' | 'unrecognized';
 
 export interface FieldMapping {
   element: Element;
@@ -33,6 +47,8 @@ export interface FillResult {
   items: FillResultItem[];
   filled: number;
   uncertain: number;
+  /** Recognized resume fields the profile had no value for. */
+  empty: number;
   unrecognized: number;
   /** Phase 4 candidate selections — one per successfully filled field. Present only when at least one Phase 4 fill succeeded. */
   formHits?: Array<{ signature: string; candidateId: string }>;

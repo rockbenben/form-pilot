@@ -107,3 +107,27 @@ describe('extractSignals', () => {
     expect(signals.inputType).toBe('text');
   });
 });
+
+describe('extractSignals · label punctuation', () => {
+  const el = (html: string): Element => {
+    document.body.innerHTML = html;
+    return document.body.querySelector('input')!;
+  };
+
+  // 智联招聘 renders every label with a trailing colon. Anchored patterns such
+  // as ^名字$ miss on 「名字:」, and only wordings that happen to have an
+  // unanchored sibling pattern were surviving.
+  it('strips a trailing colon from the label', () => {
+    expect(extractSignals(el('<label for="a">名字:</label><input id="a">')).labelText).toBe('名字');
+    expect(extractSignals(el('<label for="a">出生年月：</label><input id="a">')).labelText).toBe('出生年月');
+  });
+
+  it('strips a required marker on either side', () => {
+    expect(extractSignals(el('<label for="a">邮箱 *</label><input id="a">')).labelText).toBe('邮箱');
+    expect(extractSignals(el('<label for="a">* 手机号</label><input id="a">')).labelText).toBe('手机号');
+  });
+
+  it('leaves an interior colon alone', () => {
+    expect(extractSignals(el('<label for="a">GPA:满分4.0</label><input id="a">')).labelText).toBe('GPA:满分4.0');
+  });
+});

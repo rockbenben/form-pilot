@@ -50,6 +50,38 @@ describe('orchestrateFill', () => {
     expect(result.unrecognized).toBe(1);
     expect(result.items[0].status).toBe('unrecognized');
   });
+
+  // A recognized field the profile has no value for is the single most common
+  // "why didn't it fill?" case. Reporting it as `unrecognized` made a blank
+  // profile look identical to a broken matcher, so the two must stay distinct.
+  it('marks a recognized field with no profile value as empty, not unrecognized', async () => {
+    buildForm([{ label: '毕业院校', name: 'school' }]);
+    const result = await orchestrateFill(document, resume, null);
+    expect(result.items[0].status).toBe('empty');
+    expect(result.items[0].resumePath).toBe('education.school');
+    expect(result.empty).toBe(1);
+    expect(result.unrecognized).toBe(0);
+  });
+
+  it('separates the two failure kinds on one page', async () => {
+    buildForm([
+      { label: '姓名', name: 'name' },              // filled from the profile
+      { label: '毕业院校', name: 'school' },         // recognized, profile empty
+      { label: '你最大的缺点是什么', name: 'weakness' }, // not a resume field
+    ]);
+    const result = await orchestrateFill(document, resume, null);
+    expect(result.filled).toBe(1);
+    expect(result.empty).toBe(1);
+    expect(result.unrecognized).toBe(1);
+  });
+
+  it('reports every count as zero-or-more so the toolbar denominator is well defined', async () => {
+    buildForm([{ label: '姓名', name: 'name' }]);
+    const result = await orchestrateFill(document, resume, null);
+    // filled + uncertain + empty is what the toolbar divides by; it must never
+    // include `unrecognized`, which counts inputs that were never ours.
+    expect(result.filled + result.uncertain + result.empty).toBe(1);
+  });
 });
 
 describe('orchestrateFill with page memory', () => {

@@ -8,6 +8,7 @@ import type { PageMemoryEntry } from '@/lib/capture/types';
 import type { FormEntry } from '@/lib/storage/form-store';
 import type { FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
 import { resolveCandidate } from '@/lib/capture/candidate';
+import { isPresent, renderPresent } from '@/lib/present-date';
 
 // ─── Resume Path Resolver ─────────────────────────────────────────────────────
 
@@ -66,7 +67,7 @@ export function getValueFromResume(
     const arr = resume[section as keyof Resume];
     if (Array.isArray(arr)) {
       const entry = arr[parseInt(indexStr, 10)];
-      if (entry) return String((entry as Record<string, unknown>)[field] ?? '');
+      if (entry) return String((entry as unknown as Record<string, unknown>)[field] ?? '');
     }
     return '';
   }
@@ -105,6 +106,20 @@ export async function orchestrateFill(
   const items: FillResultItem[] = [];
   const profileHits: Array<{ resumePath: string; candidateId: string }> = [];
 
+  // Long-form answers are written once, however many boxes ask for one.
+  //
+  // 猎聘 gives a project three separate textareas — 项目描述, 项目职责, 项目业绩 —
+  // and a job two. Résumé has one description per entry, so all of them resolve
+  // to the same path and every box received the same paragraph. A recruiter sees
+  // one answer pasted three times, and the user cannot tell it happened because
+  // each field looks filled. Reporting the later boxes as 「待补」 says what is
+  // actually true: these ask different questions and the profile answers one.
+  //
+  // Scoped to prose. Repeating a phone number or a city across the several
+  // places a form asks for it is correct, and must keep working.
+  const prosePathsSeen = new Set<string>();
+  const isProse = (path: string) => /\.description$/.test(path) || path === 'basic.summary';
+
   for (const s of scanned) {
     if ((s.element as HTMLElement).getAttribute?.('data-formpilot-restored') === 'draft') continue;
 
@@ -124,13 +139,20 @@ export async function orchestrateFill(
     // until after fill succeeds — otherwise read-only / wrong-widget / draft-gated
     // fields would inflate hitCount for fills that never happened.
     let pickedProfile: { resumePath: string; candidateId: string } | null = null;
-    const value = getValueFromResume(
+    const raw = getValueFromResume(
       resume,
       s.resumePath,
       currentDomain,
       profileDomainPrefs,
       (path, candidateId) => { pickedProfile = { resumePath: path, candidateId }; },
     );
+    // A still-current job stores the PRESENT sentinel, which is not a date and
+    // must never reach a form as the literal string "present".
+    let value = isPresent(raw) ? renderPresent(doc) : raw;
+    if (value && isProse(s.resumePath)) {
+      if (prosePathsSeen.has(s.resumePath)) value = '';
+      else prosePathsSeen.add(s.resumePath);
+    }
     let filled = false;
     if (value) {
       try {
@@ -143,10 +165,15 @@ export async function orchestrateFill(
     }
     if (filled && pickedProfile) profileHits.push(pickedProfile);
 
+    // An empty `value` means the field matched a resume path but the profile
+    // has nothing stored there — the user's fix is to complete their profile,
+    // which is a different message from "this field could not be matched".
+    // Reporting both as `unrecognized` made a blank profile indistinguishable
+    // from a broken matcher.
     let status: FillResultItem['status'];
-    if (!filled) status = 'unrecognized';
-    else if (s.source === 'adapter' || s.confidence >= 0.8) status = 'filled';
-    else status = 'uncertain';
+    if (filled) status = s.source === 'adapter' || s.confidence >= 0.8 ? 'filled' : 'uncertain';
+    else if (!value) status = 'empty';
+    else status = 'unrecognized';
 
     items.push({
       element: s.element,
@@ -198,11 +225,13 @@ export async function orchestrateFill(
 
   const filled = items.filter((i) => i.status === 'filled').length;
   const uncertain = items.filter((i) => i.status === 'uncertain').length;
+  const empty = items.filter((i) => i.status === 'empty').length;
   const unrecognized = items.filter((i) => i.status === 'unrecognized').length;
   return {
     items,
     filled,
     uncertain,
+    empty,
     unrecognized,
     formHits,
     profileHits: profileHits.length > 0 ? profileHits : undefined,

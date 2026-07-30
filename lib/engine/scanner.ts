@@ -1,7 +1,7 @@
 import type { PlatformAdapter, FillSource, InputType } from './adapters/types';
-import { matchField } from './heuristic/engine';
+import { matchField, rehomeAmbiguousDates } from './heuristic/engine';
 
-export type ScannedStatus = 'recognized' | 'unrecognized';
+type ScannedStatus = 'recognized' | 'unrecognized';
 
 export interface ScannedItem {
   element: Element;
@@ -97,5 +97,24 @@ export async function scanFields(
       status: 'recognized',
     });
   }
+
+  // 猎聘 labels none of its date inputs, so a bare 「开始时间」 has to borrow its
+  // entity from the other fields in the same entry container. That evidence
+  // only exists once the whole page is scanned, which is why it runs here
+  // rather than inside matchField.
+  const rehomed = rehomeAmbiguousDates(
+    items
+      .filter((it) => it.status === 'recognized' && it.source === 'heuristic')
+      .map((it) => ({
+        element: it.element, resumePath: it.resumePath, label: it.label,
+        inputType: it.inputType, confidence: it.confidence, source: 'heuristic' as const,
+      })),
+  );
+  const byElement = new Map(rehomed.map((m) => [m.element, m.resumePath]));
+  for (const it of items) {
+    const p = byElement.get(it.element);
+    if (p && p !== it.resumePath) it.resumePath = p;
+  }
+
   return items;
 }
