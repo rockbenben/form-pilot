@@ -6,6 +6,22 @@
 
 全覆盖：国内校招应届生、国内社招求职者、海外求职者。
 
+### 工具条何时出现（默认 auto）
+
+判定顺序（高优先在前）：
+
+1. 站点规则 `never` → 隐藏
+2. 站点规则 `always` → 显示
+3. `triggerMode: manual` → 隐藏（靠快捷键或 popup 唤起）
+4. 本页有草稿或页面记忆 → 显示
+5. **资料完全是空的 → 隐藏**
+6. 页面识别出的简历字段数 ≥ 5 → 显示
+7. 其余 → 隐藏
+
+第 5 条在第 4 条**下面**是有意的：草稿是用户自己没填完的东西，恢复它不需要简历。
+没有第 5 条时，全新安装会在每个表单页弹出工具条，而它唯一的动作产出为零。
+
+
 ## 核心决策摘要
 
 | 决策项 | 选择 |
@@ -13,7 +29,7 @@
 | 表单识别策略 | 混合模式：平台规则 + 启发式 + AI 兜底 |
 | 数据存储 | 纯本地存储 + JSON 导出/导入 |
 | 浏览器支持 | Chrome only（Manifest V3） |
-| AI 调用方式 | 本地小模型默认 + 可选用户自带 API Key |
+| AI 调用方式 | 本地小模型默认 + 可选用户自带 API Key（Layer 3，**尚未实现**） |
 | MVP 平台范围 | 各类取 2-3 个代表验证全链路 |
 | 简历维护方式 | 结构化表单 + PDF/Word 导入解析 |
 | 商业模式 | 完全免费开源 |
@@ -68,7 +84,8 @@ interface Resume {
     ethnicity: string             // 民族（国内校招）
     politicalStatus: string       // 政治面貌（国内校招）
     location: string
-    willingLocations: string[]
+    // willingLocations 已移除：与 jobPreference.cities 重复（导入时直接复制），
+    // 且没有任何招聘站的字段能接收它，只会拖低完成度分母。
     avatar: string                // base64
     socialLinks: Record<string, string>  // linkedin, github, portfolio...
   }
@@ -110,7 +127,8 @@ interface Resume {
 
   skills: {
     languages: string[]           // 编程语言或外语
-    frameworks: string[]
+    // frameworks 已移除：实测三大站的技能只有一个字段（技能标签 / 技能关键词），
+    // 拆成两桶只是让用户维护两处、填到同一个格子里。已存值读取时并入 tools。
     tools: string[]
     certificates: string[]        // CET-4/6, TOEFL, PMP...
   }
@@ -223,6 +241,10 @@ interface AIAnalysisRequest {
 - **本地模型**（默认）：ONNX Runtime Web 加载轻量级 text embedding 模型，计算字段描述与简历 key 的语义相似度
 - **远程 LLM**（可选）：用户填入 API Key 后，发送结构化 prompt 给 DeepSeek/OpenAI，可处理复杂语义（如开放式问题的自动回答）
 
+> **现状：Layer 3 未实现。** 设置面板一度提供 AI 提供商下拉框和 API Key 输入框，
+> 但代码里没有任何一处读取它们——它向用户索要密钥却什么都不做。该 UI 及其
+> `Settings.apiKey` / `Settings.apiProvider` 字段已移除，等 Layer 3 真正落地时再加回。
+
 ### 级联调度逻辑
 
 ```
@@ -276,7 +298,7 @@ Content script 在页面注入的交互元素：
 | 本地 AI | ONNX Runtime Web |
 | PDF 解析 | pdf.js |
 | Word 解析 | mammoth.js |
-| 测试 | Vitest + Playwright |
+| 测试 | Vitest（jsdom）|
 
 选 WXT 的原因：自动处理 MV3 service worker 生命周期、热更新开发体验好、内置 content script/popup 脚手架支持、同类产品（OfferNow）已验证可行。
 

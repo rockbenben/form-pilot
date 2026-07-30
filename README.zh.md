@@ -126,7 +126,7 @@ yarn zip              # 打包 .output/formpilot-<version>-chrome.zip
 | **3. 页面记忆**         | 这个 URL 的精确快照                              | 仅此 URL           |
 | **4. 跨站表单记录**     | 按问题签名跨站匹配                               | 任何有同样问题的站 |
 
-**数据全在你本机。** 全部存在 `chrome.storage.local`（不上云、不走 API、不离开浏览器）。只有可选的 AI 匹配 API Key 存在 `chrome.storage.session` 里。
+**数据全在你本机。** 全部存在 `chrome.storage.local`——不上云、不发网络请求、不离开浏览器。扩展只申请 `storage` 和 `activeTab` 两个权限，没有任何 host 权限，所以安装时不会要求"读取你在所有网站上的数据"。
 
 **Shadow DOM 隔离。** 所有在页面里挂的 UI（工具栏、草稿徽章、▾ 选择器）都在 shadow root 里——宿主页的 CSS 影响不到它，它的样式也污染不到宿主页。
 
@@ -203,7 +203,7 @@ export const myPlatformAdapter: PlatformAdapter = {
 };
 ```
 
-注册到 `lib/engine/adapters/registry.ts`，把域名加到 `lib/storage/types.ts` 的 `DEFAULT_ALLOWED_DOMAINS` 里，新装用户才会自动激活工具栏。
+注册到 `lib/engine/adapters/registry.ts` 即可，不需要维护域名白名单——工具栏会在简历字段探测识别出申请表单的页面上自动出现，用户也可以在设置里按站点强制开启或关闭。
 
 ## 关于 365 开源计划
 

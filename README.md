@@ -126,7 +126,7 @@ yarn zip              # package .output/formpilot-<version>-chrome.zip
 | **3. Page Memory**         | Snapshot of exactly this URL                                  | This URL only                   |
 | **4. Form Entries**        | Cross-URL match by question signature                         | Any site with the same question |
 
-**Storage lives on your machine.** Everything is in `chrome.storage.local` (no cloud, no API, nothing leaves your browser). Only an optional AI-matching API key goes in `chrome.storage.session`.
+**Storage lives on your machine.** Everything is in `chrome.storage.local` — no cloud, no network calls, nothing leaves your browser. The extension asks for `storage` and `activeTab` only, with no host permissions, so installing it does not prompt to "read your data on all websites".
 
 **Shadow-DOM isolation.** All in-page UI (toolbar, draft badge, candidate picker) is mounted inside shadow roots, so host-page CSS never touches it and the extension's styles never touch the host page.
 
@@ -203,7 +203,7 @@ export const myPlatformAdapter: PlatformAdapter = {
 };
 ```
 
-Register it in `lib/engine/adapters/registry.ts` and add the domain to `DEFAULT_ALLOWED_DOMAINS` in `lib/storage/types.ts` so the toolbar auto-activates.
+Register it in `lib/engine/adapters/registry.ts`. No domain whitelist to update — the toolbar auto-activates wherever the resume-field probe recognizes an application form. Users can still force it on or off per site from Settings.
 
 ## About the 365 Open Source Plan
 
