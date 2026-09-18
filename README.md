@@ -105,15 +105,34 @@ When a field has more than one possible answer (your personal phone and your wor
 
 You manage all your candidates in **Dashboard → Basic Info** (phone / email) and **Dashboard → Saved Pages → Form Records** (everything else you've remembered). Add, edit, rename, delete, pin a default.
 
+### Languages
+
+The interface ships in 18 languages — English, 简体中文, 繁體中文, 日本語, 한국어, Bahasa Indonesia, Español, Português (Brasil), Italiano, Français, Deutsch, Polski, Русский, Türkçe, Tiếng Việt, العربية, हिन्दी and ไทย — the same set as the store listing. Switch under **Settings → Language**. Each entry is written in its own script, so the picker stays usable to someone who can't read the language you're currently in, and Arabic flips the layout to RTL.
+
+There are two separate locale sets, and they serve different surfaces:
+
+| Where                      | What it localizes                                    | Mechanism                                    |
+| -------------------------- | ---------------------------------------------------- | -------------------------------------------- |
+| `lib/i18n/*.ts`            | Everything inside the popup, dashboard and toolbar   | `t()` lookup, chosen at runtime in Settings  |
+| `public/_locales/<code>/`  | The extension name, description and shortcut listing | Chrome's `__MSG_*__` manifest localization   |
+
+Both ship all 18 locales. The second one is what `chrome://extensions` shows *before* you ever open the popup, so it's the only thing a user sees in their own language at install time — and Chrome does not fall back per key: a locale directory missing a placeholder the manifest references stops the extension loading entirely. `tests/lib/i18n/manifest-locales.test.ts` pins the two sets together and re-checks Chrome's 132-character description limit (English sits at 131, so there is no room to add a sentence without cutting one).
+
 ## Develop
 
 ```bash
 yarn dev              # HMR dev build, auto-reloads the extension
-yarn test             # 250 unit tests (Vitest)
+yarn test             # run the unit test suite (Vitest)
 yarn test:watch
 yarn build            # production build to .output/chrome-mv3
 yarn zip              # package .output/formpilot-<version>-chrome.zip
+yarn verify           # typecheck + test + build, in that order
 ```
+
+`build` and `zip` end with `scripts/check-build.mjs`, which fails the command if
+the output is missing anything `manifest.json` points at. Worth having: `wxt
+build` exits 0 even when it writes no bundles at all, and the only sign is a
+`WARN` line about a few files it could not stat.
 
 ## What's under the hood
 

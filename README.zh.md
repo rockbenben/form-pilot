@@ -105,15 +105,33 @@ yarn build
 
 所有候选值可以在 **Dashboard → 基本信息**（手机 / 邮箱）和 **Dashboard → 已保存页面 → 表单记录**（其它所有记住的答案）里管理——新增、改名、删除、设为默认。
 
+### 多语言
+
+界面支持 18 种语言 —— English、简体中文、繁體中文、日本語、한국어、Bahasa Indonesia、Español、Português (Brasil)、Italiano、Français、Deutsch、Polski、Русский、Türkçe、Tiếng Việt、العربية、हिन्दी、ไทย —— 与商店上架语言保持一致。在**设置 → 语言**里切换。下拉框里每种语言都用自己的文字书写，所以即使你读不懂当前界面语言也能找到自己的那一项；选阿拉伯语会把界面切成 RTL。
+
+这里有**两套互不相干的 locale**，服务的是不同界面：
+
+| 位置                       | 负责什么                                   | 机制                              |
+| -------------------------- | ------------------------------------------ | --------------------------------- |
+| `lib/i18n/*.ts`            | 弹窗、仪表盘、工具条里的所有文案           | `t()` 查表，运行时在设置里选      |
+| `public/_locales/<code>/`  | 扩展名称、描述、快捷键说明                 | Chrome 的 `__MSG_*__` manifest 本地化 |
+
+两套都是 18 种语言齐全。第二套决定的是你**还没打开弹窗**时 `chrome://extensions` 显示什么 —— 也就是用户安装后第一眼看到的、唯一用他自己语言写的界面。而且 Chrome **不会按 key 逐条回退**：某个 locale 目录存在但缺了 manifest 引用的占位符，整个扩展直接加载失败。`tests/lib/i18n/manifest-locales.test.ts` 把两套集合钉在一起，并复查 Chrome 的 132 字符描述上限（英文已经 131 字符，想再加一句话必须先删一句）。
+
 ## 开发
 
 ```bash
 yarn dev              # HMR 开发模式，扩展自动热加载
-yarn test             # 250 个单元测试（Vitest）
+yarn test             # 跑单元测试（Vitest）
 yarn test:watch
 yarn build            # 正式构建到 .output/chrome-mv3
 yarn zip              # 打包 .output/formpilot-<version>-chrome.zip
+yarn verify           # 依次跑 typecheck、test、build
 ```
+
+`build` 和 `zip` 结束后都会跑一遍 `scripts/check-build.mjs`：产物里只要缺了
+`manifest.json` 指向的文件，命令就直接失败。这一步是必要的——`wxt build`
+哪怕一个 bundle 都没写出来也照样返回 0，唯一的提示只是一行 `WARN`。
 
 ## 工作原理
 
