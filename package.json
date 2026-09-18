@@ -29,6 +29,7 @@
     "dev": "wxt",
     "build": "wxt build && node scripts/check-build.mjs",
     "zip": "wxt zip && node scripts/check-build.mjs",
+    "build:elsewhere": "node scripts/build-elsewhere.mjs",
     "check:build": "node scripts/check-build.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

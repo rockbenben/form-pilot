@@ -126,6 +126,7 @@ yarn test             # run the unit test suite (Vitest)
 yarn test:watch
 yarn build            # production build to .output/chrome-mv3
 yarn zip              # package .output/formpilot-<version>-chrome.zip
+yarn build:elsewhere  # build + zip via a temp volume, then copy into .output/
 yarn verify           # typecheck + test + build, in that order
 ```
 
@@ -133,6 +134,15 @@ yarn verify           # typecheck + test + build, in that order
 the output is missing anything `manifest.json` points at. Worth having: `wxt
 build` exits 0 even when it writes no bundles at all, and the only sign is a
 `WARN` line about a few files it could not stat.
+
+Why that happens is worth knowing, because the workaround is one command. `wxt
+build` finishes by calling `removeEmptyDirs()`, and that helper decides whether a
+directory is still in use by calling `rmdir` and treating `ENOTEMPTY` as "leave it
+alone". On a volume that implements "remove directory" as a recursive delete, the
+throw never comes, so the build wipes its own output. If that is your machine,
+`yarn build:elsewhere` builds into `os.tmpdir()`, runs the gate, then copies the
+result into `.output/` — the deletion happens *during* the build, so writing files
+in afterwards is safe, and the gate is re-run on the copy to prove it.
 
 ## What's under the hood
 

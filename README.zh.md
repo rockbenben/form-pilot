@@ -126,12 +126,21 @@ yarn test             # 跑单元测试（Vitest）
 yarn test:watch
 yarn build            # 正式构建到 .output/chrome-mv3
 yarn zip              # 打包 .output/formpilot-<version>-chrome.zip
+yarn build:elsewhere  # 在系统临时目录构建 + 打包，再复制回 .output/
 yarn verify           # 依次跑 typecheck、test、build
 ```
 
 `build` 和 `zip` 结束后都会跑一遍 `scripts/check-build.mjs`：产物里只要缺了
 `manifest.json` 指向的文件，命令就直接失败。这一步是必要的——`wxt build`
 哪怕一个 bundle 都没写出来也照样返回 0，唯一的提示只是一行 `WARN`。
+
+为什么会出现这种情况值得知道，因为绕开它只要一条命令。`wxt build` 收尾时会调
+`removeEmptyDirs()`，而这个辅助函数判断「目录还有人用」的办法是调 `rmdir`、把
+`ENOTEMPTY` 当成「别动它」。如果某个卷把「删除目录」实现成递归删除，那个异常就
+永远不会抛出来，构建于是把自己的产物删光。如果你的机器正是这样，用
+`yarn build:elsewhere`：它构建到 `os.tmpdir()`，跑闸门，再把结果复制进 `.output/`
+—— 删除发生在**构建过程中**，之后把文件写进去是安全的，闸门会在副本上再跑一遍
+以证明这一点。
 
 ## 工作原理
 
