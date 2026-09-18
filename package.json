@@ -1,6 +1,6 @@
 {
   "name": "formpilot",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "One-click resume autofill — remembers every answer across Moka, Workday, BOSS, Greenhouse. 一键投简历，跨站复填，答过的问题不再重复。",
   "private": true,
   "type": "module",
