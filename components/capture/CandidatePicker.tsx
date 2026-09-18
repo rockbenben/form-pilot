@@ -54,7 +54,7 @@ export function CandidatePicker({
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        aria-label="Switch candidate"
+        aria-label={t('candidate.picker.switch')}
         style={{
           width: 14, height: 14, lineHeight: 1, fontSize: 10,
           background: '#1f2937', color: '#d1d5db',
@@ -67,7 +67,7 @@ export function CandidatePicker({
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
-            position: 'absolute', top: 18, left: 0, zIndex: 2147483600,
+            position: 'absolute', top: 18, insetInlineStart: 0, zIndex: 2147483600,
             width: 260, background: '#111827', border: '1px solid #374151',
             borderRadius: 6, padding: 4, fontSize: 12, color: '#d1d5db',
             boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
@@ -82,7 +82,7 @@ export function CandidatePicker({
                   type="button"
                   onClick={() => { setOpen(false); onSelect(c.id); }}
                   style={{
-                    flex: 1, minWidth: 0, textAlign: 'left',
+                    flex: 1, minWidth: 0, textAlign: 'start',
                     background: 'transparent', border: 'none', color: 'inherit',
                     cursor: 'pointer', padding: 0,
                   }}
@@ -93,7 +93,7 @@ export function CandidatePicker({
                       style={{ color: '#f3f4f6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                     >{c.displayValue ?? c.value}</span>
                   </div>
-                  <div style={{ color: '#6b7280', paddingLeft: 16, fontSize: 11 }}>
+                  <div style={{ color: '#6b7280', paddingInlineStart: 16, fontSize: 11 }}>
                     {t('candidate.picker.lastSeen', { domain: lastSeenDomain(c.lastUrl) })} ·{' '}
                     {t('candidate.picker.hitCountLabel', { n: String(c.hitCount) })}
                   </div>
@@ -120,7 +120,7 @@ export function CandidatePicker({
               </div>
             );
           })}
-          <div style={{ borderTop: '1px solid #374151', marginTop: 4, paddingTop: 4, paddingLeft: 4 }}>
+          <div style={{ borderTop: '1px solid #374151', marginTop: 4, paddingTop: 4, paddingInlineStart: 4 }}>
             <button
               type="button"
               onClick={onManageAll}

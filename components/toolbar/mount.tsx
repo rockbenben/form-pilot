@@ -6,7 +6,7 @@ import CloseMenu from './CloseMenu';
 import SaveMenu from '@/components/capture/SaveMenu';
 import ToolbarToast from '@/components/capture/ToolbarToast';
 import type { FillResult } from '@/lib/engine/adapters/types';
-import { makeT, resolveLocale } from '@/lib/i18n';
+import { makeT, resolveLocale, applyElementDirection } from '@/lib/i18n';
 
 interface ToolbarAppProps {
   /** Initial position: left offset from viewport left, bottom offset from viewport bottom */
@@ -168,6 +168,8 @@ export async function mountToolbar(options: ToolbarMountOptions): Promise<{ unmo
     anchor: 'body',
     append: 'last',
     onMount(container) {
+      // Our container, not the host page's <html>: see applyElementDirection.
+      applyElementDirection(container, locale);
       const root = ReactDOM.createRoot(container);
       root.render(
         <ToolbarApp

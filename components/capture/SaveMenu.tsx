@@ -31,7 +31,7 @@ export default function SaveMenu({
   const containerStyle: React.CSSProperties = {
     position: 'absolute',
     top: '100%',
-    left: 0,
+    insetInlineStart: 0,
     marginTop: '4px',
     backgroundColor: '#1e1e3a',
     border: '1px solid #374151',
@@ -49,7 +49,7 @@ export default function SaveMenu({
     background: 'none',
     border: 'none',
     color: enabled ? '#e5e7eb' : '#6b7280',
-    textAlign: 'left',
+    textAlign: 'start',
     fontSize: '13px',
     cursor: enabled ? 'pointer' : 'not-allowed',
     whiteSpace: 'nowrap',

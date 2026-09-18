@@ -73,7 +73,7 @@ function StatusBar({ segments, t }: { segments: Segment[]; t: (k: string) => str
             <div
               key={s.key}
               style={{ width: `${(s.n / total) * 100}%`, backgroundColor: s.color }}
-              className="h-full first:rounded-l-full last:rounded-r-full"
+              className="h-full first:rounded-s-full last:rounded-e-full"
             />
           ),
         )}

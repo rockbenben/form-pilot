@@ -27,7 +27,7 @@ export default function DraftBadge({
   const wrapStyle: React.CSSProperties = {
     position: 'fixed',
     top: '16px',
-    right: '16px',
+    insetInlineEnd: '16px',
     zIndex: 2147483647,
     backgroundColor: '#1e1e3a',
     color: '#fff',
@@ -45,11 +45,11 @@ export default function DraftBadge({
   const btn = (bg: string): React.CSSProperties => ({
     backgroundColor: bg, color: '#fff', border: 'none',
     borderRadius: '6px', padding: '6px 10px', fontSize: '12px',
-    cursor: 'pointer', marginRight: '6px', marginTop: '6px',
+    cursor: 'pointer', marginInlineEnd: '6px', marginTop: '6px',
   });
 
   const closeStyle: React.CSSProperties = {
-    position: 'absolute', top: '4px', right: '6px',
+    position: 'absolute', top: '4px', insetInlineEnd: '6px',
     background: 'none', border: 'none', color: '#9ca3af',
     fontSize: '14px', cursor: 'pointer',
   };

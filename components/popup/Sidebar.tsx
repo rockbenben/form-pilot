@@ -34,15 +34,15 @@ export default function Sidebar({ active, onChange, className }: SidebarProps) {
   ];
 
   return (
-    <div className={`${className ?? 'w-28'} flex flex-col border-r border-gray-800 bg-gray-950 shrink-0`}>
+    <div className={`${className ?? 'w-28'} flex flex-col border-e border-gray-800 bg-gray-950 shrink-0`}>
       <div className="flex-1 py-2">
         {NAV_ITEMS.map((item) => (
           <button
             key={item.id}
             onClick={() => onChange(item.id)}
-            className={`w-full text-left px-4 py-2 text-sm rounded-none transition-colors
+            className={`w-full text-start px-4 py-2 text-sm rounded-none transition-colors
               ${active === item.id
-                ? 'bg-blue-500/20 text-blue-400 border-r-2 border-blue-400'
+                ? 'bg-blue-500/20 text-blue-400 border-e-2 border-blue-400'
                 : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
               }`}
           >
@@ -53,9 +53,9 @@ export default function Sidebar({ active, onChange, className }: SidebarProps) {
       <div className="border-t border-gray-800">
         <button
           onClick={() => onChange('settings')}
-          className={`w-full text-left px-4 py-2 text-sm rounded-none transition-colors
+          className={`w-full text-start px-4 py-2 text-sm rounded-none transition-colors
             ${active === 'settings'
-              ? 'bg-blue-500/20 text-blue-400 border-r-2 border-blue-400'
+              ? 'bg-blue-500/20 text-blue-400 border-e-2 border-blue-400'
               : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
             }`}
         >

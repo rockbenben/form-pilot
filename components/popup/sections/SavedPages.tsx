@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import type { DraftSnapshot, PageMemoryEntry, CapturedField } from '@/lib/capture/types';
 import type { FormEntry, FieldCandidate } from '@/lib/storage/form-store';
 import type { FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, arrow, type Locale } from '@/lib/i18n';
 import { formatRelativeTime } from '@/lib/capture/time-format';
 import { MULTI_VALUE_SEPARATOR } from '@/lib/capture/element-value';
 
@@ -63,7 +63,7 @@ function pickDefault(entry: FormEntry): FieldCandidate | null {
 }
 
 export default function SavedPagesSection() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [tab, setTab] = useState<SubTab>('drafts');
   const [drafts, setDrafts] = useState<DraftSnapshot[]>([]);
   const [memory, setMemory] = useState<Record<string, PageMemoryEntry[]>>({});
@@ -161,10 +161,10 @@ export default function SavedPagesSection() {
           <table className="w-full">
             <thead className="text-xs text-gray-500">
               <tr>
-                <th className="text-left p-1">{t('savedPages.column.url')}</th>
-                <th className="text-left p-1">{t('savedPages.column.savedAt')}</th>
-                <th className="text-left p-1">{t('savedPages.column.fields')}</th>
-                <th className="text-left p-1">{t('savedPages.column.actions')}</th>
+                <th className="text-start p-1">{t('savedPages.column.url')}</th>
+                <th className="text-start p-1">{t('savedPages.column.savedAt')}</th>
+                <th className="text-start p-1">{t('savedPages.column.fields')}</th>
+                <th className="text-start p-1">{t('savedPages.column.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -214,9 +214,9 @@ export default function SavedPagesSection() {
           <table className="w-full">
             <thead className="text-xs text-gray-500">
               <tr>
-                <th className="text-left p-1">{t('savedPages.column.url')}</th>
-                <th className="text-left p-1">{t('savedPages.column.fields')}</th>
-                <th className="text-left p-1">{t('savedPages.column.actions')}</th>
+                <th className="text-start p-1">{t('savedPages.column.url')}</th>
+                <th className="text-start p-1">{t('savedPages.column.fields')}</th>
+                <th className="text-start p-1">{t('savedPages.column.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -281,7 +281,7 @@ export default function SavedPagesSection() {
                 return (
                   <div key={e.signature} className="border border-gray-800 rounded">
                     <button
-                      className="w-full text-left p-2 flex items-center justify-between hover:bg-gray-800/40"
+                      className="w-full text-start p-2 flex items-center justify-between hover:bg-gray-800/40"
                       onClick={() => toggleExpand(key)}
                     >
                       <div className="min-w-0">
@@ -302,6 +302,7 @@ export default function SavedPagesSection() {
                         onChanged={refresh}
                         now={now}
                         t={t}
+                        locale={locale}
                       />
                     )}
                   </div>
@@ -316,7 +317,7 @@ export default function SavedPagesSection() {
 }
 
 function FormEntryPanel({
-  entry, domains, onChanged, now, t,
+  entry, domains, onChanged, now, t, locale,
 }: {
   entry: FormEntry;
   domains: Record<string, string>;
@@ -326,6 +327,8 @@ function FormEntryPanel({
   // formatRelativeTime passes `{ n: 5 }`. Declaring it narrower here made
   // this component reject the very function it is always handed.
   t: (key: string, vars?: Record<string, string | number>) => string;
+  /** Threaded alongside `t` so `arrow(locale)` can pick the right glyph. */
+  locale: Locale;
 }) {
   const [adding, setAdding] = React.useState(false);
   const [addValue, setAddValue] = React.useState('');
@@ -477,7 +480,7 @@ function FormEntryPanel({
               return (
                 <div key={domain} className="flex items-center justify-between text-xs">
                   <span className="text-gray-300">
-                    {domain} → {cand ? (cand.displayValue ?? cand.value) : '(missing)'}
+                    {domain} {arrow(locale)} {cand ? (cand.displayValue ?? cand.value) : `(${t('candidate.domainPref.missing')})`}
                   </span>
                   <button
                     className="text-red-400 hover:text-red-300"

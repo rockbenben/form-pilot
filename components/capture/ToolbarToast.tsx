@@ -26,7 +26,7 @@ export default function ToolbarToast({
   const style: React.CSSProperties = {
     position: 'absolute',
     bottom: '100%',
-    left: 0,
+    insetInlineStart: 0,
     marginBottom: '8px',
     backgroundColor: VARIANT_BG[variant],
     color: '#fff',

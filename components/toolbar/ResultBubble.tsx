@@ -19,7 +19,7 @@ export default function ResultBubble({ result, onClose, t }: ResultBubbleProps) 
   const bubbleStyle: React.CSSProperties = {
     position: 'absolute',
     bottom: '100%',
-    left: 0,
+    insetInlineStart: 0,
     marginBottom: '8px',
     backgroundColor: '#1e1e3a',
     borderRadius: '8px',

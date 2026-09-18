@@ -57,7 +57,7 @@ export default function ArraySection<T>({
             <span className="text-xs text-gray-300 truncate flex-1">
               {getTitle(item, index)}
             </span>
-            <div className="flex items-center gap-2 shrink-0 ml-2">
+            <div className="flex items-center gap-2 shrink-0 ms-2">
               <button
                 type="button"
                 onClick={(e) => {

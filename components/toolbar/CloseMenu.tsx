@@ -10,7 +10,7 @@ export interface CloseMenuProps {
 const menuStyle: React.CSSProperties = {
   position: 'absolute',
   bottom: '100%',
-  right: 0,
+  insetInlineEnd: 0,
   marginBottom: '6px',
   backgroundColor: '#1e1e3a',
   borderRadius: '8px',
@@ -28,7 +28,7 @@ const itemStyle: React.CSSProperties = {
   border: 'none',
   color: '#e5e7eb',
   fontSize: '12px',
-  textAlign: 'left',
+  textAlign: 'start',
   padding: '7px 10px',
   borderRadius: '5px',
   cursor: 'pointer',

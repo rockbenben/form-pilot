@@ -54,7 +54,7 @@ export default function StatusBar({ resume, onImport, onExport }: StatusBarProps
           <span className="text-gray-500">{t('popup.stat.filled')}</span>
           {missing > 0 && (
             <>
-              <span className="ml-1.5 font-semibold tabular-nums" style={{ color: STATUS_COLORS.empty }}>{missing}</span>
+              <span className="ms-1.5 font-semibold tabular-nums" style={{ color: STATUS_COLORS.empty }}>{missing}</span>
               <span className="text-gray-500">{t('popup.stat.missing')}</span>
             </>
           )}

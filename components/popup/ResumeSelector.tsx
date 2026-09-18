@@ -102,14 +102,14 @@ export default function ResumeSelector({
                 <button
                   onClick={(e) => { e.stopPropagation(); beginRename(r); }}
                   title={t('resume.rename')}
-                  className={`pr-1 text-[10px] leading-none transition-opacity
+                  className={`pe-1 text-[10px] leading-none transition-opacity
                     ${isActive ? 'text-white opacity-70 hover:opacity-100' : 'text-gray-400 opacity-50 hover:opacity-100'}`}
                 >
                   ✎
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setPendingDelete(r); }}
-                  className={`pr-2 pl-0.5 text-xs leading-none transition-opacity opacity-60 hover:opacity-100
+                  className={`pe-2 ps-0.5 text-xs leading-none transition-opacity opacity-60 hover:opacity-100
                     ${isActive ? 'text-white' : 'text-gray-400'}`}
                   title={t('resume.delete')}
                 >

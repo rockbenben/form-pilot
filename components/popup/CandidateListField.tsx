@@ -1,7 +1,7 @@
 // components/popup/CandidateListField.tsx
 import React, { useState } from 'react';
 import type { FieldCandidate } from '@/lib/capture/candidate';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, arrow } from '@/lib/i18n';
 
 export interface CandidateListFieldProps {
   label: string;
@@ -35,7 +35,7 @@ export default function CandidateListField({
   valueInputPlaceholder,
   onAdd, onUpdate, onDelete, onSetPin, onClearDomainPref,
 }: CandidateListFieldProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [adding, setAdding] = useState(false);
   const [addValue, setAddValue] = useState('');
   const [addLabel, setAddLabel] = useState('');
@@ -125,12 +125,12 @@ export default function CandidateListField({
                 {!isEditing && (
                   <div className="flex gap-2 shrink-0 text-gray-400">
                     <button
-                      title={isPinned ? 'Unpin' : 'Pin'}
+                      title={isPinned ? t('candidate.picker.unpin') : t('candidate.picker.pin')}
                       onClick={() => onSetPin(isPinned ? null : c.id)}
                     >{isPinned ? '★' : '☆'}</button>
-                    <button title="Edit" onClick={() => beginEdit(c)}>✎</button>
+                    <button title={t('candidate.dashboard.editValue')} onClick={() => beginEdit(c)}>✎</button>
                     <button
-                      title="Delete"
+                      title={t('candidate.picker.delete')}
                       onClick={() => onDelete(c.id)}
                       className="text-red-400 hover:text-red-300"
                     >🗑</button>
@@ -175,11 +175,11 @@ export default function CandidateListField({
               return (
                 <div key={domain} className="flex items-center justify-between">
                   <span className="text-gray-300">
-                    {domain} → {c ? (c.label ? `${c.value} (${c.label})` : c.value) : '(missing)'}
+                    {domain} {arrow(locale)} {c ? (c.label ? `${c.value} (${c.label})` : c.value) : `(${t('candidate.domainPref.missing')})`}
                   </span>
                   <button
                     className="text-red-400 hover:text-red-300"
-                    title="Clear"
+                    title={t('candidate.domainPref.clear')}
                     onClick={() => onClearDomainPref(domain)}
                   >🗑</button>
                 </div>
