@@ -1,6 +1,6 @@
 {
   "name": "formpilot",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "One-click resume autofill — remembers every answer across Moka, Workday, BOSS, Greenhouse. 一键投简历，跨站复填，答过的问题不再重复。",
   "private": true,
   "type": "module",
@@ -27,8 +27,9 @@
   },
   "scripts": {
     "dev": "wxt",
-    "build": "wxt build",
-    "zip": "wxt zip",
+    "build": "wxt build && node scripts/check-build.mjs",
+    "zip": "wxt zip && node scripts/check-build.mjs",
+    "check:build": "node scripts/check-build.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "wxt prepare && tsc --noEmit",
