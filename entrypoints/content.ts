@@ -1,6 +1,6 @@
 import { findAdapter } from '@/lib/engine/adapters/registry';
 import { orchestrateFill } from '@/lib/engine/orchestrator';
-import type { FillResult, FillResultItem } from '@/lib/engine/adapters/types';
+import type { FillResult } from '@/lib/engine/adapters/types';
 import type { Resume, Settings } from '@/lib/storage/types';
 import { createEmptyResume } from '@/lib/storage/types';
 import type { DraftSnapshot, PageMemoryEntry } from '@/lib/capture/types';
@@ -18,9 +18,20 @@ import { resolveVisibility } from '@/lib/engine/visibility';
 import { normalizeDomain, type FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
 import { makeT, resolveLocale } from '@/lib/i18n';
 import { computeSignatureFor } from '@/lib/capture/signature';
-import { fillElement } from '@/lib/engine/heuristic/fillers';
-import { detectElementKind } from '@/lib/capture/element-value';
-import { mountCandidatePicker, type MountedCandidatePicker } from '@/components/capture/mount-candidate-picker';
+import { wireCandidatePicker } from '@/lib/capture/picker-wiring';
+import type { MountedCandidatePicker } from '@/components/capture/mount-candidate-picker';
+
+// Count contenteditable surfaces as form elements too, so pages that are mostly
+// rich-text editors / comment boxes still pass the activation gate.
+// `[contenteditable]:not([contenteditable="false"])` catches true, empty, and
+// plaintext-only without enumerating each.
+//
+// Shared with observeFormChanges() below, which watches for the same elements
+// appearing later. Two copies of this selector used to live in this file; they
+// had to be kept in step by hand, and the gate and the observer disagreeing
+// would mean a form the observer can see and the gate cannot (or vice versa).
+const FORM_SELECTOR =
+  'input, select, textarea, [contenteditable]:not([contenteditable="false"])';
 
 export default defineContentScript({
   // Injection is scoped by the in-script form-element gate below (> 3 inputs);
@@ -34,12 +45,6 @@ export default defineContentScript({
   async main(ctx) {
     await new Promise((r) => setTimeout(r, 1000));
 
-    // Count contenteditable surfaces as form elements too, so pages that are
-    // mostly rich-text editors / comment boxes still pass the activation gate.
-    // `[contenteditable]:not([contenteditable="false"])` catches true, empty,
-    // and plaintext-only without enumerating each.
-    const FORM_SELECTOR =
-      'input, select, textarea, [contenteditable]:not([contenteditable="false"])';
     const countFormElements = () => document.querySelectorAll(FORM_SELECTOR).length;
 
     // Load settings
@@ -163,188 +168,115 @@ export default defineContentScript({
           });
         }
 
-        // Helper: mount a ▾ picker for a Phase 2 profile multi-value field.
-        // Defined here (inside handleFill's try block) so it closes over
-        // `resume`, `currentDomain`, `t`, `promptedDomainPrefs`, and
-        // `mountedPickers` from the surrounding scopes.
-        function mountProfilePickerInline(
-          it: FillResultItem,
-          resumePath: 'basic.phone' | 'basic.email',
-          currentCandidateId: string | null,
-        ) {
-          if (!resume) return;
-          // Hold mutable state on a single object so pin-toggle and delete
-          // callbacks share their view across repeat invocations (scalar-param
-          // reassignment won't persist across the picker's callback lifetime).
-          const state = {
-            candidates: resumePath === 'basic.phone' ? resume.basic.phone : resume.basic.email,
-            pinnedId: resumePath === 'basic.phone' ? resume.basic.phonePinnedId : resume.basic.emailPinnedId,
-          };
-
-          let picker: MountedCandidatePicker;
-          picker = mountCandidatePicker({
-            target: it.element as Element,
-            signature: `profile:${resumePath}`,
-            candidates: state.candidates,
-            pinnedId: state.pinnedId,
-            currentCandidateId,
-            t,
-            onSelect: async (cid) => {
-              const picked = state.candidates.find((c) => c.id === cid);
-              if (!picked) return;
-              // Detect current widget kind — phone/email can be text, tel, or
-              // even a <select> for country-code splits. Hardcoding 'text' here
-              // silently failed on non-text widgets.
-              const kind = detectElementKind(it.element as Element) ?? 'text';
-              let ok = false;
-              try {
-                ok = await fillElement(it.element as Element, picked.value, kind);
-              } catch { ok = false; }
-              // Only bump hitCount AND prompt for domain-pref when the fill
-              // actually succeeded.
-              if (!ok) return;
-              chrome.runtime.sendMessage({
-                type: 'BUMP_PROFILE_HIT',
-                resumePath,
-                candidateId: cid,
-                sourceUrl: window.location.href,
-              });
-              const promptKey = `profile:${resumePath}:${currentDomain}`;
-              if (!promptedDomainPrefs.has(promptKey)) {
-                promptedDomainPrefs.add(promptKey);
-                const msg = t('candidate.domainPref.rememberToast', {
-                  domain: currentDomain,
-                  value: picked.label ?? picked.value,
-                });
-                if (window.confirm(msg)) {
-                  chrome.runtime.sendMessage({
-                    type: 'SET_PROFILE_DOMAIN_PREF',
-                    resumePath,
-                    domain: currentDomain,
-                    candidateId: cid,
-                  });
-                }
-              }
-            },
-            onPinToggle: async (cid) => {
-              const next = state.pinnedId === cid ? null : cid;
-              await chrome.runtime.sendMessage({ type: 'SET_PROFILE_PIN', resumePath, candidateId: next });
-              state.pinnedId = next;
-              picker.update({ pinnedId: next });
-            },
-            onDelete: async (cid) => {
-              await chrome.runtime.sendMessage({ type: 'DELETE_PROFILE_CANDIDATE', resumePath, candidateId: cid });
-              const idx = state.candidates.findIndex((c) => c.id === cid);
-              if (idx >= 0) state.candidates.splice(idx, 1);
-              if (state.pinnedId === cid) state.pinnedId = null;
-              picker.update({ candidates: state.candidates, pinnedId: state.pinnedId });
-              if (state.candidates.length < 2) {
-                const mIdx = mountedPickers.indexOf(picker);
-                if (mIdx >= 0) mountedPickers.splice(mIdx, 1);
-                picker.unmount();
-              }
-            },
-            onManageAll: () => {
-              const url = chrome.runtime.getURL('/dashboard.html') + '#basic';
-              window.open(url, '_blank');
-            },
-          });
-          mountedPickers.push(picker);
-        }
-
-        // Mount a ▾ picker beside every multi-candidate field.
+        // Mount a ▾ picker beside every multi-candidate field. Both phases run
+        // the same implementation (lib/capture/picker-wiring.ts); what differs
+        // is only the IPC vocabulary, the stored value shape, and where
+        // "manage all" lands in the dashboard.
         for (const it of result.items) {
           if (!it.element) continue;
+          const element = it.element;
 
-          // Phase 4: signature-keyed form entries (Phase A, unchanged).
+          // Phase 4: signature-keyed form entries.
           if (it.source === 'form') {
-            const sig = computeSignatureFor(it.element);
+            const sig = computeSignatureFor(element);
             const entry = formEntries[sig];
             if (!entry) continue;
             if (entry.kind === 'checkbox') continue;
             if (entry.candidates.length < 2) continue;
 
-            const currentCandidateId = hits.find((h) => h.signature === sig)?.candidateId ?? null;
-
-            let picker: MountedCandidatePicker;
-            picker = mountCandidatePicker({
-              target: it.element,
+            wireCandidatePicker({
+              element,
               signature: sig,
+              currentDomain,
               t,
+              locale,
+              prompted: promptedDomainPrefs,
+              mounted: mountedPickers,
               candidates: entry.candidates,
               pinnedId: entry.pinnedId,
-              currentCandidateId,
-              onSelect: async (cid) => {
-                const picked = entry.candidates.find((c) => c.id === cid);
-                if (!picked) return;
-                const val = picked.displayValue && picked.displayValue.length > 0 ? picked.displayValue : picked.value;
-                // Detect the CURRENT element's kind — the stored entry.kind can diverge
-                // if the same signature is rendered by a different widget on this site.
-                const kind = detectElementKind(it.element as Element) ?? entry.kind;
-                let ok = false;
-                try {
-                  ok = await fillElement(it.element as Element, val, kind);
-                } catch { ok = false; }
-                // Only bump hitCount AND prompt for domain-pref when the fill
-                // actually succeeded — otherwise read-only / wrong-widget fields
-                // inflate counts and prompt users to "remember" values they never
-                // saw filled.
-                if (!ok) return;
+              currentCandidateId: hits.find((h) => h.signature === sig)?.candidateId ?? null,
+              // Form entries store what the site showed the user, so that is the
+              // string to write back.
+              valueFor: (c) => (c.displayValue && c.displayValue.length > 0 ? c.displayValue : c.value),
+              fallbackKind: entry.kind,
+              rememberPromptValue: (_c, filled) => filled,
+              onBump: (c) => {
                 chrome.runtime.sendMessage({
                   type: 'BUMP_FORM_HIT',
                   signature: sig,
-                  candidateId: cid,
+                  candidateId: c.id,
                   sourceUrl: window.location.href,
                 });
-                // First switch in this session for (sig, domain) → ask whether to remember.
-                const promptKey = `${sig}:${currentDomain}`;
-                if (!promptedDomainPrefs.has(promptKey)) {
-                  promptedDomainPrefs.add(promptKey);
-                  const msg = t('candidate.domainPref.rememberToast', { domain: currentDomain, value: val });
-                  if (window.confirm(msg)) {
-                    chrome.runtime.sendMessage({
-                      type: 'SET_DOMAIN_PREF',
-                      signature: sig,
-                      domain: currentDomain,
-                      candidateId: cid,
-                    });
-                  }
-                }
               },
-              onPinToggle: async (cid) => {
-                const next = entry.pinnedId === cid ? null : cid;
-                await chrome.runtime.sendMessage({ type: 'SET_FORM_PIN', signature: sig, candidateId: next });
-                entry.pinnedId = next;
-                picker.update({ pinnedId: next });
+              onRemember: (c) => {
+                chrome.runtime.sendMessage({
+                  type: 'SET_DOMAIN_PREF',
+                  signature: sig,
+                  domain: currentDomain,
+                  candidateId: c.id,
+                });
               },
-              onDelete: async (cid) => {
-                await chrome.runtime.sendMessage({ type: 'DELETE_FORM_CANDIDATE', signature: sig, candidateId: cid });
-                entry.candidates = entry.candidates.filter((c) => c.id !== cid);
-                picker.update({ candidates: entry.candidates, pinnedId: entry.pinnedId });
-                // If this entry now has < 2 candidates, unmount the picker entirely.
-                if (entry.candidates.length < 2) {
-                  const idx = mountedPickers.indexOf(picker);
-                  if (idx >= 0) mountedPickers.splice(idx, 1);
-                  picker.unmount();
-                }
-              },
-              onManageAll: () => {
-                const url = chrome.runtime.getURL('/dashboard.html') + '#savedPages';
-                window.open(url, '_blank');
-              },
+              onPin: (candidateId) =>
+                chrome.runtime.sendMessage({ type: 'SET_FORM_PIN', signature: sig, candidateId }),
+              onDelete: (candidateId) =>
+                chrome.runtime.sendMessage({ type: 'DELETE_FORM_CANDIDATE', signature: sig, candidateId }),
+              manageAllHash: '#savedPages',
             });
-            mountedPickers.push(picker);
             continue;
           }
 
           // Phase 2: profile multi-value (basic.phone / basic.email).
           if (it.resumePath === 'basic.phone' || it.resumePath === 'basic.email') {
             if (!resume) continue;
-            const rp = it.resumePath;
-            const candidates = rp === 'basic.phone' ? resume.basic.phone : resume.basic.email;
+            const resumePath = it.resumePath;
+            const candidates =
+              resumePath === 'basic.phone' ? resume.basic.phone : resume.basic.email;
             if (candidates.length < 2) continue;
-            const currentCandidateId = profileHits.find((h) => h.resumePath === rp)?.candidateId ?? null;
-            mountProfilePickerInline(it, rp, currentCandidateId);
+
+            wireCandidatePicker({
+              element,
+              signature: `profile:${resumePath}`,
+              currentDomain,
+              t,
+              locale,
+              prompted: promptedDomainPrefs,
+              mounted: mountedPickers,
+              candidates,
+              pinnedId:
+                resumePath === 'basic.phone'
+                  ? resume.basic.phonePinnedId
+                  : resume.basic.emailPinnedId,
+              currentCandidateId:
+                profileHits.find((h) => h.resumePath === resumePath)?.candidateId ?? null,
+              valueFor: (c) => c.value,
+              // Phone / email can be text, tel, or a <select> for country-code
+              // splits; 'text' is only the last resort.
+              fallbackKind: 'text',
+              // Profile candidates carry a human label ("个人手机") that reads
+              // better in the prompt than the raw number.
+              rememberPromptValue: (c, filled) => c.label ?? filled,
+              onBump: (c) => {
+                chrome.runtime.sendMessage({
+                  type: 'BUMP_PROFILE_HIT',
+                  resumePath,
+                  candidateId: c.id,
+                  sourceUrl: window.location.href,
+                });
+              },
+              onRemember: (c) => {
+                chrome.runtime.sendMessage({
+                  type: 'SET_PROFILE_DOMAIN_PREF',
+                  resumePath,
+                  domain: currentDomain,
+                  candidateId: c.id,
+                });
+              },
+              onPin: (candidateId) =>
+                chrome.runtime.sendMessage({ type: 'SET_PROFILE_PIN', resumePath, candidateId }),
+              onDelete: (candidateId) =>
+                chrome.runtime.sendMessage({ type: 'DELETE_PROFILE_CANDIDATE', resumePath, candidateId }),
+              manageAllHash: '#basic',
+            });
           }
         }
 
@@ -891,15 +823,13 @@ function observeFormChanges(
   const maxFires = opts?.maxFormChangeFires ?? Infinity;
   let fires = 0;
 
-  const formSelector =
-    'input, select, textarea, [contenteditable]:not([contenteditable="false"])';
   const mutationObserver = new MutationObserver((mutations) => {
     if (fires >= maxFires) return;
     const hasNewFormElements = mutations.some((m) =>
       Array.from(m.addedNodes).some(
         (node) =>
           node instanceof HTMLElement &&
-          (node.querySelector(formSelector) || node.matches?.(formSelector)),
+          (node.querySelector(FORM_SELECTOR) || node.matches?.(FORM_SELECTOR)),
       ),
     );
     if (hasNewFormElements) {

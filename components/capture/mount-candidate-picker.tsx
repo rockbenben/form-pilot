@@ -2,10 +2,13 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { CandidatePicker, type CandidatePickerProps } from './CandidatePicker';
+import { applyElementDirection, type Locale } from '@/lib/i18n';
 
 export interface MountCandidatePickerOpts extends CandidatePickerProps {
   target: Element;
   signature: string;
+  /** UI language, for the picker's reading direction (Arabic is RTL). */
+  locale: Locale;
 }
 
 export interface MountedCandidatePicker {
@@ -20,6 +23,8 @@ export function mountCandidatePicker(opts: MountCandidatePickerOpts): MountedCan
   host.style.zIndex = '2147483600';
   host.style.pointerEvents = 'auto';
   document.body.appendChild(host);
+  // Our host, not the host page's <html>: see applyElementDirection.
+  applyElementDirection(host, opts.locale);
 
   const shadow = host.attachShadow({ mode: 'open' });
   const mountNode = document.createElement('div');
