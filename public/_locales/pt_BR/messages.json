@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "Nome da extensão, exibido em chrome://extensions e na Chrome Web Store."
+  },
+  "extensionDescription": {
+    "message": "Preencha seu currículo com um clique. Lembra suas respostas e as repete no próximo formulário. Qualquer ATS; dados locais.",
+    "description": "Descrição da extensão, exibida em chrome://extensions e na Chrome Web Store."
+  },
+  "commandToggleToolbar": {
+    "message": "Mostrar / ocultar a barra de ferramentas do FormPilot",
+    "description": "Descrição do atalho de teclado, exibida em chrome://extensions/shortcuts."
+  }
+}

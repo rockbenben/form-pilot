@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "एक्सटेंशन का नाम, chrome://extensions और Chrome Web Store में दिखता है।"
+  },
+  "extensionDescription": {
+    "message": "एक क्लिक में रिज़्यूमे ऑटोफ़िल। लिखे हर जवाब याद रखकर अगले जॉब फ़ॉर्म में भर देता है। हर ATS पर चलता है, डेटा लोकल रहता है।",
+    "description": "एक्सटेंशन का विवरण, chrome://extensions और Chrome Web Store में दिखता है।"
+  },
+  "commandToggleToolbar": {
+    "message": "FormPilot टूलबार दिखाएँ / छिपाएँ",
+    "description": "कीबोर्ड शॉर्टकट का विवरण, chrome://extensions/shortcuts में दिखता है।"
+  }
+}

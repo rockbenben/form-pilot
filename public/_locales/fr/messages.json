@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "Nom de l'extension, affiché dans chrome://extensions et le Chrome Web Store."
+  },
+  "extensionDescription": {
+    "message": "Remplissez votre CV en un clic. Mémorise vos réponses et les réutilise au formulaire suivant. Tous les ATS ; données locales.",
+    "description": "Description de l'extension, affichée dans chrome://extensions et le Chrome Web Store."
+  },
+  "commandToggleToolbar": {
+    "message": "Afficher / masquer la barre d'outils FormPilot",
+    "description": "Description du raccourci clavier, affichée dans chrome://extensions/shortcuts."
+  }
+}

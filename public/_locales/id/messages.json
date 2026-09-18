@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "Nama ekstensi, ditampilkan di chrome://extensions dan Chrome Web Store."
+  },
+  "extensionDescription": {
+    "message": "Isi otomatis resume sekali klik. Jawaban Anda diingat dan diisi ulang di lamaran berikutnya. Mendukung ATS umum, data tetap lokal.",
+    "description": "Deskripsi ekstensi, ditampilkan di chrome://extensions dan Chrome Web Store."
+  },
+  "commandToggleToolbar": {
+    "message": "Tampilkan / sembunyikan toolbar FormPilot",
+    "description": "Deskripsi pintasan keyboard, ditampilkan di chrome://extensions/shortcuts."
+  }
+}

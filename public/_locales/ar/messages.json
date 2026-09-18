@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "اسم الإضافة، يظهر في chrome://extensions و Chrome Web Store."
+  },
+  "extensionDescription": {
+    "message": "تعبئة السيرة الذاتية بنقرة واحدة. يتذكّر كل إجابة تكتبها ويعيد تعبئتها في نموذج العمل التالي. يعمل مع أي ATS، وبياناتك تبقى محلية.",
+    "description": "وصف الإضافة، يظهر في chrome://extensions و Chrome Web Store."
+  },
+  "commandToggleToolbar": {
+    "message": "إظهار / إخفاء شريط أدوات FormPilot",
+    "description": "وصف اختصار لوحة المفاتيح، يظهر في chrome://extensions/shortcuts."
+  }
+}

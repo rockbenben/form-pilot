@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "Tên tiện ích, hiển thị trong chrome://extensions và Chrome Web Store."
+  },
+  "extensionDescription": {
+    "message": "Tự động điền hồ sơ một cú nhấp. Ghi nhớ câu trả lời đã nhập và điền lại ở biểu mẫu sau. Hỗ trợ nhiều ATS, dữ liệu lưu cục bộ.",
+    "description": "Mô tả tiện ích, hiển thị trong chrome://extensions và Chrome Web Store."
+  },
+  "commandToggleToolbar": {
+    "message": "Hiện / ẩn thanh công cụ FormPilot",
+    "description": "Mô tả phím tắt, hiển thị trong chrome://extensions/shortcuts."
+  }
+}

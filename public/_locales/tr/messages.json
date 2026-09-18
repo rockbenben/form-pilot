@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "Uzantı adı; chrome://extensions ve Chrome Web Store'da görünür."
+  },
+  "extensionDescription": {
+    "message": "Tek tıkla özgeçmiş doldurma. Yanıtlarınızı hatırlar, sonraki formda yeniden doldurur. Tüm ATS'lerde çalışır, veriler yerel kalır.",
+    "description": "Uzantı açıklaması; chrome://extensions ve Chrome Web Store'da görünür."
+  },
+  "commandToggleToolbar": {
+    "message": "FormPilot araç çubuğunu göster / gizle",
+    "description": "Klavye kısayolu açıklaması; chrome://extensions/shortcuts'ta görünür."
+  }
+}

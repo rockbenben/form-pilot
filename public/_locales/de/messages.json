@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "Name der Erweiterung, angezeigt unter chrome://extensions und im Chrome Web Store."
+  },
+  "extensionDescription": {
+    "message": "Lebenslauf per Klick ausfüllen. Merkt sich Ihre Antworten und füllt sie im nächsten Formular ein. Jede ATS; Daten bleiben lokal.",
+    "description": "Beschreibung der Erweiterung, angezeigt unter chrome://extensions und im Chrome Web Store."
+  },
+  "commandToggleToolbar": {
+    "message": "FormPilot-Symbolleiste ein- / ausblenden",
+    "description": "Beschreibung der Tastenkombination, angezeigt unter chrome://extensions/shortcuts."
+  }
+}

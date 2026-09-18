@@ -1,4 +1,4 @@
-export const zh = {
+export const zh_CN = {
   // App
   'app.name': 'FormPilot',
   'app.subtitle': '个人资料 · 自动填写 · 智能匹配',
@@ -59,8 +59,6 @@ export const zh = {
   'basic.socialLinks.linkedin': 'LinkedIn',
   'basic.socialLinks.portfolio': '个人网站',
   'basic.socialLinks.wechat': '微信号',
-  'settings.language.zh': '中文',
-  'settings.language.en': 'English',
 
   // Education
   'education.title': '教育经历',
@@ -146,7 +144,7 @@ export const zh = {
 
   // Popup
   'popup.tagline': '一键投递 · 跨站复填',
-  'popup.currentResume': '资料完成度',
+  'popup.currentResume': '资料',
   'popup.result.title': '本次填写',
   'popup.filling': '填写中...',
   'popup.stat.filled': '已填',
@@ -235,7 +233,7 @@ export const zh = {
   'settings.capture.skipSensitive': '跳过敏感字段',
   'settings.capture.skipSensitive.hint': '身份证号、验证码、银行卡等不会被保存或填写',
 
-  'settings.trigger.mode': '什么时候出现',
+  'settings.trigger.mode': 'FormPilot 何时出现',
   'settings.trigger.auto.label': '自动出现',
   'settings.trigger.auto.hint': '页面看起来是申请表时，工具条自己出现',
   'settings.trigger.manual.label': '只在我唤起时出现',
@@ -255,12 +253,15 @@ export const zh = {
   'candidate.picker.pin': '设为默认',
   'candidate.picker.unpin': '取消默认',
   'candidate.picker.delete': '删除候选',
+  'candidate.picker.switch': '切换候选',
   'candidate.picker.hitCountLabel': '{n} 次命中',
   'candidate.picker.lastSeen': '上次在 {domain}',
   'candidate.domainPref.rememberToast': '在 {domain} 下记住用「{value}」？',
   'candidate.domainPref.remember': '记住',
   'candidate.domainPref.onceOnly': '只此一次',
   'candidate.domainPref.cancel': '取消',
+  'candidate.domainPref.missing': '已失效',
+  'candidate.domainPref.clear': '清除',
   'candidate.dashboard.addCandidate': '新增候选',
   'candidate.dashboard.domainOverrides': '按域名覆盖',
   'candidate.dashboard.candidatesCount': '{n} 个候选',

@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "확장 프로그램 이름이며 chrome://extensions 와 Chrome Web Store 에 표시됩니다."
+  },
+  "extensionDescription": {
+    "message": "클릭 한 번으로 이력서를 자동 입력. 입력한 답변은 다음 지원서 양식에 자동으로 다시 채워집니다. 주요 ATS 양식 지원, 데이터는 브라우저에만 저장.",
+    "description": "확장 프로그램 설명이며 chrome://extensions 와 Chrome Web Store 에 표시됩니다."
+  },
+  "commandToggleToolbar": {
+    "message": "FormPilot 도구 모음 표시 / 숨기기",
+    "description": "키보드 단축키 설명이며 chrome://extensions/shortcuts 에 표시됩니다."
+  }
+}

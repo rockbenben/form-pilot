@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "Название расширения, отображается в chrome://extensions и Chrome Web Store."
+  },
+  "extensionDescription": {
+    "message": "Автозаполнение резюме в один клик. Запоминает ответы и подставляет их в следующую анкету. Работает с ATS, данные хранятся локально.",
+    "description": "Описание расширения, отображается в chrome://extensions и Chrome Web Store."
+  },
+  "commandToggleToolbar": {
+    "message": "Показать / скрыть панель FormPilot",
+    "description": "Описание горячей клавиши, отображается в chrome://extensions/shortcuts."
+  }
+}

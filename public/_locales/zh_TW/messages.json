@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "擴充功能名稱，顯示在 chrome://extensions 和 Chrome Web Store。"
+  },
+  "extensionDescription": {
+    "message": "一鍵自動填寫履歷，答過的問題跨站自動複填。支援常見 ATS 表單，資料只存在本機瀏覽器，不上雲、不聯網。",
+    "description": "擴充功能說明，顯示在 chrome://extensions 和 Chrome Web Store。"
+  },
+  "commandToggleToolbar": {
+    "message": "顯示 / 隱藏 FormPilot 工具列",
+    "description": "快速鍵說明，顯示在 chrome://extensions/shortcuts。"
+  }
+}

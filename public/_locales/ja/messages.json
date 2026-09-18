@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "拡張機能の名前。chrome://extensions と Chrome Web Store に表示されます。"
+  },
+  "extensionDescription": {
+    "message": "ワンクリックで履歴書を自動入力。入力済みの回答は次回の応募フォームで自動的に再利用。主要な ATS フォームに対応し、データは端末内のみに保存。",
+    "description": "拡張機能の説明。chrome://extensions と Chrome Web Store に表示されます。"
+  },
+  "commandToggleToolbar": {
+    "message": "FormPilot ツールバーの表示 / 非表示",
+    "description": "キーボードショートカットの説明。chrome://extensions/shortcuts に表示されます。"
+  }
+}

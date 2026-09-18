@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "FormPilot",
+    "description": "ชื่อส่วนขยาย แสดงใน chrome://extensions และ Chrome Web Store"
+  },
+  "extensionDescription": {
+    "message": "กรอกเรซูเม่ในคลิกเดียว จำคำตอบที่เคยพิมพ์และเติมซ้ำในฟอร์มสมัครงานครั้งหน้า ใช้ได้กับ ATS ทั่วไป ข้อมูลอยู่ในเครื่อง",
+    "description": "คำอธิบายส่วนขยาย แสดงใน chrome://extensions และ Chrome Web Store"
+  },
+  "commandToggleToolbar": {
+    "message": "แสดง / ซ่อนแถบเครื่องมือ FormPilot",
+    "description": "คำอธิบายคีย์ลัด แสดงใน chrome://extensions/shortcuts"
+  }
+}

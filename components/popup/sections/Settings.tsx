@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Settings } from '@/lib/storage/types';
 import { getSettings, updateSettings } from '@/lib/storage/settings-store';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, LOCALES, type Locale } from '@/lib/i18n';
 import { STATUS_COLORS } from '@/lib/ui/field-status';
 
 const focusRing =
@@ -98,14 +98,25 @@ export default function SettingsSection() {
             list had. */}
         <label className="flex items-center gap-3">
           <span className="text-sm text-gray-300">{t('settings.language')}</span>
+          {/* Wider than the two-option version's w-40: the longest endonyms
+              ("Português (Brasil)", "Bahasa Indonesia") overflowed it, and a
+              truncated language name in a language picker is exactly the thing
+              the endonyms exist to prevent. */}
           <select
-            className={`w-40 bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-sm
+            className={`w-48 bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-sm
               text-gray-200 hover:border-gray-600 transition-colors ${focusRing}`}
             value={locale}
-            onChange={(e) => setLocale(e.target.value as 'zh' | 'en')}
+            onChange={(e) => setLocale(e.target.value as Locale)}
           >
-            <option value="zh">中文</option>
-            <option value="en">English</option>
+            {/* Each option is labelled in its own language. Listing them in
+                the current UI language would make the picker useless to the
+                one person who needs it: someone who cannot read the current
+                one. */}
+            {LOCALES.map(({ code, name }) => (
+              <option key={code} value={code}>
+                {name}
+              </option>
+            ))}
           </select>
         </label>
       </Group>
