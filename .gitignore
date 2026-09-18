@@ -11,6 +11,9 @@ dist/
 *.swo
 .claude
 
+# Agent working state (same treatment as .claude / .superpowers above)
+.workbuddy-ai/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -18,6 +21,17 @@ Thumbs.db
 # Environment
 .env
 .env.*
+
+# Store listing copy. These files no longer live here — the canonical home is the
+# FillDuck project directory (013-fillduck/projects/form-pilot/, itself git-ignored
+# there), because FillDuck is what reads them and fills the Chrome / Edge / AMO
+# back offices. Nothing in this repo reads them.
+#
+# The rules stay as a guard: FillDuck's own store-copy prompt tells you to run it
+# "in your extension project directory", so a future regeneration will drop them
+# back here. Ignoring beats committing personal upload copy.
+descriptions.json
+search-terms.json
 
 # Test
 coverage/
