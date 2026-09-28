@@ -168,9 +168,9 @@ export const zh_TW = {
   'toolbar.close.thisPage': '本頁隱藏',
   'toolbar.close.thisSite': '本站不再顯示',
 
-  'capture.menu.draft': '📝 儲存草稿',
-  'capture.menu.writeback': '↩️ 存回履歷',
-  'capture.menu.memory': '🧠 記住本頁',
+  'capture.menu.draft': '儲存草稿',
+  'capture.menu.writeback': '存回履歷',
+  'capture.menu.memory': '記住本頁',
 
   'capture.toast.draft.saved': '已儲存 {n} 個欄位的草稿',
   'capture.toast.draft.partial': '已儲存 {n} 個，略過 {m} 個',

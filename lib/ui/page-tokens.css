@@ -1,0 +1,88 @@
+/*
+ * Chrome-native design tokens for the page surfaces (popup, dashboard).
+ * The injected Shadow-DOM twin lives in lib/ui/inject-css.ts; both define the
+ * same --fp-* variables, and DESIGN.md is the contract they implement.
+ * `prefers-color-scheme` here follows the browser theme, like chrome:// pages.
+ */
+:root {
+  --fp-canvas: #ffffff;
+  --fp-sunken: #f8f9fa;
+  --fp-fill: #f1f3f4;
+  --fp-fill-hover: #e8eaed;
+  --fp-line: #dadce0;
+  --fp-ink: #202124;
+  --fp-ink2: #5f6368;
+  --fp-ink3: #70757a;
+  --fp-primary: #1a73e8;
+  --fp-primary-hover: #1967d2;
+  --fp-on-primary: #ffffff;
+  --fp-link: #1967d2;
+  --fp-tint: #e8f0fe;
+  --fp-success: #188038;
+  --fp-success-bg: #e6f4ea;
+  --fp-warning: #b06000;
+  --fp-warn-bg: #fef7e0;
+  --fp-warn-line: #f3e4c0;
+  --fp-danger: #d93025;
+  --fp-danger-bg: #fce8e6;
+  --fp-danger-line: #f6cfcb;
+  --fp-filled: #188038;
+  --fp-uncertain: #b06000;
+  --fp-empty: #1a73e8;
+  --fp-unrecognized: #d93025;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fp-canvas: #202124;
+    --fp-sunken: #292a2d;
+    --fp-fill: #35363a;
+    --fp-fill-hover: #3c4043;
+    --fp-line: #5f6368;
+    --fp-ink: #e8eaed;
+    --fp-ink2: #9aa0a6;
+    --fp-ink3: #8e918f;
+    --fp-primary: #8ab4f8;
+    --fp-primary-hover: #a8c7fa;
+    --fp-on-primary: #0b1420;
+    --fp-link: #8ab4f8;
+    --fp-tint: rgba(138, 180, 248, .16);
+    --fp-success: #81c995;
+    --fp-success-bg: rgba(129, 201, 149, .14);
+    --fp-warning: #fdd663;
+    --fp-warn-bg: rgba(253, 214, 99, .14);
+    --fp-warn-line: rgba(253, 214, 99, .3);
+    --fp-danger: #f28b82;
+    --fp-danger-bg: rgba(242, 139, 130, .14);
+    --fp-danger-line: rgba(242, 139, 130, .3);
+    --fp-filled: #81c995;
+    --fp-uncertain: #fdd663;
+    --fp-empty: #8ab4f8;
+    --fp-unrecognized: #f28b82;
+  }
+}
+
+@theme inline {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto,
+    "Microsoft YaHei UI", "PingFang SC", sans-serif;
+  --color-canvas: var(--fp-canvas);
+  --color-sunken: var(--fp-sunken);
+  --color-fill: var(--fp-fill);
+  --color-fill-hover: var(--fp-fill-hover);
+  --color-line: var(--fp-line);
+  --color-ink: var(--fp-ink);
+  --color-ink2: var(--fp-ink2);
+  --color-ink3: var(--fp-ink3);
+  --color-primary: var(--fp-primary);
+  --color-primary-hover: var(--fp-primary-hover);
+  --color-on-primary: var(--fp-on-primary);
+  --color-link: var(--fp-link);
+  --color-tint: var(--fp-tint);
+  --color-success: var(--fp-success);
+  --color-success-bg: var(--fp-success-bg);
+  --color-warning: var(--fp-warning);
+  --color-warn-bg: var(--fp-warn-bg);
+  --color-warn-line: var(--fp-warn-line);
+  --color-danger: var(--fp-danger);
+  --color-danger-bg: var(--fp-danger-bg);
+  --color-danger-line: var(--fp-danger-line);
+}

@@ -46,10 +46,10 @@ export default class SectionErrorBoundary extends React.Component<Props, State> 
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div className="rounded border border-red-900/60 bg-red-950/30 px-4 py-3">
-        <p className="text-sm font-medium text-red-300">{this.props.fallbackTitle}</p>
-        <p className="mt-1 text-xs text-red-200/70 leading-relaxed">{this.props.fallbackHint}</p>
-        <pre className="mt-2 overflow-x-auto text-[11px] text-red-200/50 whitespace-pre-wrap">
+      <div className="rounded-lg border border-danger-line bg-danger-bg px-4 py-3">
+        <p className="text-sm font-medium text-danger">{this.props.fallbackTitle}</p>
+        <p className="mt-1 text-xs text-danger leading-relaxed">{this.props.fallbackHint}</p>
+        <pre className="mt-2 overflow-x-auto text-[11px] text-danger whitespace-pre-wrap">
           {this.state.error.message}
         </pre>
       </div>

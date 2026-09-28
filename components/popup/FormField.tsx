@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import React from 'react';
 import { PRESENT, isPresent } from '@/lib/present-date';
 
 // ─── Base field styles ────────────────────────────────────────────────────────
 
 const inputBase =
-  'w-full bg-gray-900 border border-gray-700 rounded px-2.5 py-1.5 text-sm text-gray-200 '
-  + 'placeholder-gray-600 hover:border-gray-600 focus:outline-none focus:border-blue-500 transition-colors';
+  'w-full bg-sunken border border-line rounded-lg px-2.5 py-1.5 text-sm text-ink '
+  + 'placeholder-gray-600 hover:border-line focus:outline-none focus:border-primary transition-colors';
 
-const labelBase = 'block text-xs font-medium text-gray-400 mb-1';
+const labelBase = 'block text-xs font-medium text-ink2 mb-1';
 
 // ─── FormField ────────────────────────────────────────────────────────────────
 
@@ -29,13 +29,15 @@ export function FormField({
   placeholder,
   rows = 3,
 }: FormFieldProps) {
+  const fieldId = useId();
   return (
     <div className="mb-3">
       {/* A field that is the only one in its group would otherwise print the
           group's heading twice. Pass an empty label to let the heading speak. */}
-      {label ? <label className={labelBase}>{label}</label> : null}
+      {label ? <label htmlFor={fieldId} className={labelBase}>{label}</label> : null}
       {type === 'textarea' ? (
         <textarea
+          id={fieldId}
           className={inputBase + ' resize-none'}
           value={value as string}
           onChange={(e) => onChange(e.target.value)}
@@ -44,6 +46,7 @@ export function FormField({
         />
       ) : (
         <input
+          id={fieldId}
           type={type}
           className={inputBase}
           value={value as string}
@@ -70,6 +73,7 @@ export function TagListField({
   onChange,
   placeholder,
 }: TagListFieldProps) {
+  const fieldId = useId();
   const [input, setInput] = useState('');
 
   const addTag = () => {
@@ -93,18 +97,18 @@ export function TagListField({
 
   return (
     <div className="mb-3">
-      <label className={labelBase}>{label}</label>
+      <label htmlFor={fieldId} className={labelBase}>{label}</label>
       <div className="flex flex-wrap gap-1 mb-1">
         {tags.map((tag, i) => (
           <span
             key={i}
-            className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs"
+            className="flex items-center gap-1 px-2 py-0.5 bg-tint text-link rounded-lg text-xs"
           >
             {tag}
             <button
               type="button"
               onClick={() => removeTag(i)}
-              className="text-blue-400 hover:text-red-400 transition-colors leading-none"
+              className="text-link hover:text-danger transition-colors leading-none"
             >
               ×
             </button>
@@ -112,6 +116,7 @@ export function TagListField({
         ))}
       </div>
       <input
+        id={fieldId}
         type="text"
         className={inputBase}
         value={input}
@@ -151,7 +156,7 @@ export function EndDateField({ label, presentLabel, value, onChange }: EndDateFi
     <div className="mb-3">
       <div className="flex items-baseline justify-between gap-2 mb-1">
         <label className={labelBase + ' mb-0'}>{label}</label>
-        <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">
+        <label className="flex items-center gap-1.5 text-xs text-ink2 cursor-pointer">
           <input
             type="checkbox"
             checked={current}
@@ -161,7 +166,7 @@ export function EndDateField({ label, presentLabel, value, onChange }: EndDateFi
         </label>
       </div>
       {current ? (
-        <div className={inputBase + ' text-gray-400 select-none'}>{presentLabel}</div>
+        <div className={inputBase + ' text-ink2 select-none'}>{presentLabel}</div>
       ) : (
         <input
           type="month"
@@ -186,7 +191,7 @@ export function EndDateField({ label, presentLabel, value, onChange }: EndDateFi
 export function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-6">
-      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2.5 pb-1.5 border-b border-gray-800">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ink2 mb-2.5 pb-1.5 border-b border-line">
         {title}
       </h3>
       {children}

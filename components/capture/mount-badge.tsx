@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import DraftBadge from './DraftBadge';
 import type { DraftSnapshot } from '@/lib/capture/types';
 import { makeT, resolveLocale, applyElementDirection } from '@/lib/i18n';
+import { ensureInjectStyles } from '@/lib/ui/inject-css';
 
 export interface DraftBadgeMountOptions {
   ctx: InstanceType<typeof ContentScriptContext>;
@@ -26,6 +27,7 @@ export async function mountDraftBadge(opts: DraftBadgeMountOptions): Promise<{ u
     onMount(container) {
       // Our container, not the host page's <html>: see applyElementDirection.
       applyElementDirection(container, locale);
+      ensureInjectStyles(container);
       const root = ReactDOM.createRoot(container);
       root.render(
         <DraftBadge

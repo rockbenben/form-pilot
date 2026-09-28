@@ -125,13 +125,13 @@ export default function ImportDialog({ onClose, onImported }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onClick={handleOverlayClick}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl w-80 flex flex-col overflow-hidden">
+      <div className="bg-sunken border border-line rounded-lg shadow-xl w-80 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-          <span className="text-sm font-semibold text-gray-200">{t('import.title')}</span>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+          <span className="text-sm font-semibold text-ink">{t('import.title')}</span>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-200 text-lg leading-none transition-colors"
+            className="text-ink2 hover:text-ink text-lg leading-none transition-colors"
             aria-label={t('import.close')}
           >
             ×
@@ -139,13 +139,13 @@ export default function ImportDialog({ onClose, onImported }: Props) {
         </div>
 
         {/* Mode tabs */}
-        <div className="flex border-b border-gray-700">
+        <div className="flex border-b border-line">
           <button
             onClick={() => { setMode('json'); resetMessages(); }}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${
               mode === 'json'
-                ? 'bg-gray-800 text-blue-400 border-b-2 border-blue-400'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'bg-fill text-link border-b-2 border-primary'
+                : 'text-ink2 hover:text-ink'
             }`}
           >
             {t('import.json')}
@@ -154,8 +154,8 @@ export default function ImportDialog({ onClose, onImported }: Props) {
             onClick={() => { setMode('resume'); resetMessages(); }}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${
               mode === 'resume'
-                ? 'bg-gray-800 text-blue-400 border-b-2 border-blue-400'
-                : 'text-gray-400 hover:text-gray-200'
+                ? 'bg-fill text-link border-b-2 border-primary'
+                : 'text-ink2 hover:text-ink'
             }`}
           >
             {t('import.resume')}
@@ -164,7 +164,7 @@ export default function ImportDialog({ onClose, onImported }: Props) {
 
         {/* Body */}
         <div className="p-4 flex flex-col gap-3">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-ink2">
             {mode === 'json'
               ? t('import.json')
               : t('import.resume')}
@@ -174,8 +174,8 @@ export default function ImportDialog({ onClose, onImported }: Props) {
           <button
             onClick={triggerFileInput}
             disabled={loading}
-            className={`w-full border border-dashed border-gray-600 rounded-md py-6 text-xs text-gray-400
-              hover:border-blue-500 hover:text-blue-400 transition-colors
+            className={`w-full border border-dashed border-line rounded-md py-6 text-xs text-ink2
+              hover:border-primary hover:text-link transition-colors
               ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             {loading ? t('import.parsing') : t('import.click')}
@@ -192,14 +192,14 @@ export default function ImportDialog({ onClose, onImported }: Props) {
 
           {/* Status */}
           {status && (
-            <p className="text-xs text-green-400 bg-green-400/10 rounded px-2 py-1">
+            <p className="text-xs text-success bg-success-bg rounded-lg px-2 py-1">
               {status}
             </p>
           )}
 
           {/* Error */}
           {error && (
-            <p className="text-xs text-red-400 bg-red-400/10 rounded px-2 py-1">
+            <p className="text-xs text-danger bg-danger-bg rounded-lg px-2 py-1">
               {error}
             </p>
           )}

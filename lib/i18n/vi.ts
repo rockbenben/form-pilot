@@ -168,9 +168,9 @@ export const vi = {
   'toolbar.close.thisPage': 'Ẩn trên trang này',
   'toolbar.close.thisSite': 'Không hiện trên trang web này',
 
-  'capture.menu.draft': '📝 Lưu nháp',
-  'capture.menu.writeback': '↩️ Lưu vào hồ sơ',
-  'capture.menu.memory': '🧠 Ghi nhớ trang này',
+  'capture.menu.draft': 'Lưu nháp',
+  'capture.menu.writeback': 'Lưu vào hồ sơ',
+  'capture.menu.memory': 'Ghi nhớ trang này',
 
   'capture.toast.draft.saved': 'Đã lưu nháp với {n} mục',
   'capture.toast.draft.partial': 'Đã lưu {n}, bỏ qua {m}',

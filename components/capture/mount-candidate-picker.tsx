@@ -3,6 +3,7 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { CandidatePicker, type CandidatePickerProps } from './CandidatePicker';
 import { applyElementDirection, type Locale } from '@/lib/i18n';
+import { ensureInjectStyles } from '@/lib/ui/inject-css';
 
 export interface MountCandidatePickerOpts extends CandidatePickerProps {
   target: Element;
@@ -27,6 +28,7 @@ export function mountCandidatePicker(opts: MountCandidatePickerOpts): MountedCan
   applyElementDirection(host, opts.locale);
 
   const shadow = host.attachShadow({ mode: 'open' });
+  ensureInjectStyles(shadow);
   const mountNode = document.createElement('div');
   shadow.appendChild(mountNode);
 

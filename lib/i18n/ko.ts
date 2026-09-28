@@ -168,9 +168,9 @@ export const ko = {
   'toolbar.close.thisPage': '이 페이지에서 숨기기',
   'toolbar.close.thisSite': '이 사이트에서 표시 안 함',
 
-  'capture.menu.draft': '📝 임시 저장',
-  'capture.menu.writeback': '↩️ 프로필에 저장',
-  'capture.menu.memory': '🧠 이 페이지 기억',
+  'capture.menu.draft': '임시 저장',
+  'capture.menu.writeback': '프로필에 저장',
+  'capture.menu.memory': '이 페이지 기억',
 
   'capture.toast.draft.saved': '{n}개 항목을 임시 저장했습니다',
   'capture.toast.draft.partial': '{n}개 저장, {m}개 건너뜀',

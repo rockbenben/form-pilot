@@ -168,9 +168,9 @@ export const ar = {
   'toolbar.close.thisPage': 'إخفاء في هذه الصفحة',
   'toolbar.close.thisSite': 'عدم الظهور في هذا الموقع',
 
-  'capture.menu.draft': '📝 حفظ كمسودة',
-  'capture.menu.writeback': '↩️ حفظ إلى الملف',
-  'capture.menu.memory': '🧠 تذكّر هذه الصفحة',
+  'capture.menu.draft': 'حفظ كمسودة',
+  'capture.menu.writeback': 'حفظ إلى الملف',
+  'capture.menu.memory': 'تذكّر هذه الصفحة',
 
   'capture.toast.draft.saved': 'تم حفظ مسودة بـ {n} حقلًا',
   'capture.toast.draft.partial': 'تم حفظ {n} وتخطي {m}',

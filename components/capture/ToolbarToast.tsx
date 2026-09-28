@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { CheckIcon, WarnIcon, CloseIcon, BoltIcon } from '@/lib/ui/icons';
 
 interface ToolbarToastProps {
   message: string;
@@ -8,11 +9,17 @@ interface ToolbarToastProps {
   timeoutMs?: number;
 }
 
-const VARIANT_BG: Record<NonNullable<ToolbarToastProps['variant']>, string> = {
-  info: '#1e1e3a',
-  success: '#166534',
-  warn: '#92400e',
-  error: '#7f1d1d',
+const VARIANT_ICON = {
+  info: BoltIcon,
+  success: CheckIcon,
+  warn: WarnIcon,
+  error: CloseIcon,
+};
+const VARIANT_COLOR = {
+  info: 'var(--fp-link)',
+  success: 'var(--fp-filled)',
+  warn: 'var(--fp-uncertain)',
+  error: 'var(--fp-unrecognized)',
 };
 
 export default function ToolbarToast({
@@ -23,21 +30,14 @@ export default function ToolbarToast({
     return () => clearTimeout(id);
   }, [onDismiss, timeoutMs]);
 
-  const style: React.CSSProperties = {
-    position: 'absolute',
-    bottom: '100%',
-    insetInlineStart: 0,
-    marginBottom: '8px',
-    backgroundColor: VARIANT_BG[variant],
-    color: '#fff',
-    padding: '8px 12px',
-    borderRadius: '6px',
-    fontSize: '12px',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-    maxWidth: '260px',
-    whiteSpace: 'normal',
-    zIndex: 999999,
-  };
+  const Icon = VARIANT_ICON[variant];
 
-  return <div style={style}>{message}</div>;
+  return (
+    <div className="fp-toast" role="status" style={{ bottom: '100%', insetInlineStart: 0, marginBottom: 8 }}>
+      <div className="fp-toast-row">
+        <span style={{ color: VARIANT_COLOR[variant], display: 'inline-flex' }}><Icon size={15} /></span>
+        <span>{message}</span>
+      </div>
+    </div>
+  );
 }

@@ -168,9 +168,9 @@ export const th = {
   'toolbar.close.thisPage': 'ซ่อนในหน้านี้',
   'toolbar.close.thisSite': 'ไม่แสดงในเว็บนี้',
 
-  'capture.menu.draft': '📝 บันทึกฉบับร่าง',
-  'capture.menu.writeback': '↩️ บันทึกลงโปรไฟล์',
-  'capture.menu.memory': '🧠 จดจำหน้านี้',
+  'capture.menu.draft': 'บันทึกฉบับร่าง',
+  'capture.menu.writeback': 'บันทึกลงโปรไฟล์',
+  'capture.menu.memory': 'จดจำหน้านี้',
 
   'capture.toast.draft.saved': 'บันทึกฉบับร่างแล้ว {n} ฟิลด์',
   'capture.toast.draft.partial': 'บันทึก {n} ฟิลด์ ข้าม {m} ฟิลด์',

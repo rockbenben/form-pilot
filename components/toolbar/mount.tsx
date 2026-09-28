@@ -7,6 +7,7 @@ import SaveMenu from '@/components/capture/SaveMenu';
 import ToolbarToast from '@/components/capture/ToolbarToast';
 import type { FillResult } from '@/lib/engine/adapters/types';
 import { makeT, resolveLocale, applyElementDirection } from '@/lib/i18n';
+import { ensureInjectStyles } from '@/lib/ui/inject-css';
 
 interface ToolbarAppProps {
   /** Initial position: left offset from viewport left, bottom offset from viewport bottom */
@@ -94,7 +95,7 @@ function ToolbarApp({
   };
 
   return (
-    <div style={wrapperStyle}>
+    <div className="fp-scope" style={wrapperStyle}>
       {showResult && fillResult && (
         <ResultBubble result={fillResult} onClose={() => setShowResult(false)} t={t} />
       )}
@@ -170,6 +171,7 @@ export async function mountToolbar(options: ToolbarMountOptions): Promise<{ unmo
     onMount(container) {
       // Our container, not the host page's <html>: see applyElementDirection.
       applyElementDirection(container, locale);
+      ensureInjectStyles(container);
       const root = ReactDOM.createRoot(container);
       root.render(
         <ToolbarApp

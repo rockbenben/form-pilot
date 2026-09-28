@@ -168,9 +168,9 @@ export const pl = {
   'toolbar.close.thisPage': 'Ukryj tutaj',
   'toolbar.close.thisSite': 'Nigdy na tej witrynie',
 
-  'capture.menu.draft': '📝 Zapisz szkic',
-  'capture.menu.writeback': '↩️ Zapisz do profilu',
-  'capture.menu.memory': '🧠 Zapamiętaj stronę',
+  'capture.menu.draft': 'Zapisz szkic',
+  'capture.menu.writeback': 'Zapisz do profilu',
+  'capture.menu.memory': 'Zapamiętaj stronę',
 
   'capture.toast.draft.saved': 'Zapisano szkic z {n} polami',
   'capture.toast.draft.partial': 'Zapisano {n}, pominięto {m}',

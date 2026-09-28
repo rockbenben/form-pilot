@@ -6,20 +6,14 @@ import type { FillStatus } from '@/lib/engine/adapters/types';
  *
  * These are the product's own vocabulary, so every surface that reports a fill
  * must use the same ones: the in-page result bubble, the popup summary, and
- * anything added later. They lived only inside ResultBubble before, which meant
- * the popup was free to invent its own colours for the same three numbers —
- * and did.
+ * anything added later. The values are CSS variables, not literals — the
+ * palette lives in DESIGN.md's token files (lib/ui/page-tokens.css for pages,
+ * lib/ui/inject-css.ts for shadow UI), and a status colour must flip with the
+ * same prefers-color-scheme as everything else.
  */
 export const STATUS_COLORS: Record<FillStatus, string> = {
-  filled: '#4ade80',
-  uncertain: '#facc15',
-  empty: '#60a5fa',
-  unrecognized: '#f87171',
-};
-
-export const STATUS_ICONS: Record<FillStatus, string> = {
-  filled: '✅',
-  uncertain: '⚠️',
-  empty: '📝',
-  unrecognized: '❌',
+  filled: 'var(--fp-filled)',
+  uncertain: 'var(--fp-uncertain)',
+  empty: 'var(--fp-empty)',
+  unrecognized: 'var(--fp-unrecognized)',
 };

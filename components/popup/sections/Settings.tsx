@@ -5,7 +5,7 @@ import { useI18n, LOCALES, type Locale } from '@/lib/i18n';
 import { STATUS_COLORS } from '@/lib/ui/field-status';
 
 const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400';
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
  * A titled group of related controls.
@@ -16,8 +16,8 @@ const focusRing =
  */
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="border-t border-gray-800 pt-5">
-      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-3">
+    <section className="border-t border-line pt-5">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ink2 mb-3">
         {title}
       </h3>
       {children}
@@ -72,7 +72,7 @@ export default function SettingsSection() {
   };
 
   if (!settings) {
-    return <p className="text-sm text-gray-500">{t('import.parsing')}</p>;
+    return <p className="text-sm text-ink2">{t('import.parsing')}</p>;
   }
 
   const overrides = Object.entries(settings.siteOverrides);
@@ -82,7 +82,7 @@ export default function SettingsSection() {
     // row of them puts the label and its control at opposite ends of the screen.
     <div className="max-w-xl flex flex-col gap-6">
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-lg font-semibold text-gray-100">{t('settings.title')}</h2>
+        <h2 className="text-lg font-semibold text-ink">{t('settings.title')}</h2>
         <span
           className={`text-xs transition-opacity ${saving || saved ? 'opacity-100' : 'opacity-0'}`}
           style={{ color: saved && !saving ? STATUS_COLORS.filled : undefined }}
@@ -97,14 +97,14 @@ export default function SettingsSection() {
             two-option select — the same broken relationship the site-rules
             list had. */}
         <label className="flex items-center gap-3">
-          <span className="text-sm text-gray-300">{t('settings.language')}</span>
+          <span className="text-sm text-ink">{t('settings.language')}</span>
           {/* Wider than the two-option version's w-40: the longest endonyms
               ("Português (Brasil)", "Bahasa Indonesia") overflowed it, and a
               truncated language name in a language picker is exactly the thing
               the endonyms exist to prevent. */}
           <select
-            className={`w-48 bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-sm
-              text-gray-200 hover:border-gray-600 transition-colors ${focusRing}`}
+            className={`w-48 bg-sunken border border-line rounded-lg px-2 py-1.5 text-sm
+              text-ink hover:border-line transition-colors ${focusRing}`}
             value={locale}
             onChange={(e) => setLocale(e.target.value as Locale)}
           >
@@ -128,10 +128,10 @@ export default function SettingsSection() {
             return (
               <label
                 key={mode}
-                className={`flex items-start gap-2.5 rounded border px-3 py-2.5 cursor-pointer transition-colors
+                className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors
                   ${active
-                    ? 'border-blue-500/60 bg-blue-500/10'
-                    : 'border-gray-800 hover:border-gray-700 hover:bg-gray-900/60'
+                    ? 'border-line bg-tint'
+                    : 'border-line hover:border-line hover:bg-sunken'
                   }`}
               >
                 <input
@@ -142,10 +142,10 @@ export default function SettingsSection() {
                   onChange={() => handleChange({ triggerMode: mode })}
                 />
                 <span className="text-sm leading-snug">
-                  <span className={active ? 'text-gray-100' : 'text-gray-300'}>
+                  <span className={active ? 'text-ink' : 'text-ink'}>
                     {t(`settings.trigger.${mode}.label`)}
                   </span>
-                  <span className="block text-xs text-gray-500 mt-0.5">
+                  <span className="block text-xs text-ink2 mt-0.5">
                     {t(`settings.trigger.${mode}.hint`)}
                   </span>
                 </span>
@@ -153,28 +153,28 @@ export default function SettingsSection() {
             );
           })}
         </div>
-        <p className="text-xs text-gray-600 mt-2">{t('settings.trigger.hint')}</p>
+        <p className="text-xs text-ink3 mt-2">{t('settings.trigger.hint')}</p>
       </Group>
 
       <Group title={t('settings.sites.title')}>
         {overrides.length === 0 ? (
-          <p className="text-sm text-gray-600">{t('settings.sites.empty')}</p>
+          <p className="text-sm text-ink3">{t('settings.sites.empty')}</p>
         ) : (
-          <ul className="flex flex-col divide-y divide-gray-800/80 border border-gray-800 rounded overflow-hidden">
+          <ul className="flex flex-col divide-y divide-line border border-line rounded-lg overflow-hidden">
             {overrides.map(([domain, value]) => (
               <li
                 key={domain}
-                className="flex items-center gap-3 px-3 py-2 hover:bg-gray-900/60 transition-colors"
+                className="flex items-center gap-3 px-3 py-2 hover:bg-sunken transition-colors"
               >
                 {/* Domain and its rule sit next to each other. They used to be
                     pushed to opposite ends by justify-between, so at full width
                     nothing connected a row's domain to its own status. */}
-                <span className="text-sm text-gray-200 truncate">{domain}</span>
+                <span className="text-sm text-ink truncate">{domain}</span>
                 <span
-                  className={`shrink-0 text-[11px] px-1.5 py-0.5 rounded
+                  className={`shrink-0 text-[11px] px-1.5 py-0.5 rounded-lg
                     ${value === 'always'
-                      ? 'bg-blue-500/15 text-blue-300'
-                      : 'bg-gray-800 text-gray-400'
+                      ? 'bg-tint text-link'
+                      : 'bg-fill text-ink2'
                     }`}
                 >
                   {t(`settings.sites.${value}`)}
@@ -182,7 +182,7 @@ export default function SettingsSection() {
                 <span className="flex-1" />
                 <button
                   onClick={() => handleRemoveOverride(domain)}
-                  className={`shrink-0 text-xs text-gray-500 hover:text-red-400 transition-colors rounded ${focusRing}`}
+                  className={`shrink-0 text-xs text-ink2 hover:text-danger transition-colors rounded-lg ${focusRing}`}
                 >
                   {t('settings.sites.remove')}
                 </button>
@@ -190,7 +190,7 @@ export default function SettingsSection() {
             ))}
           </ul>
         )}
-        <p className="text-xs text-gray-600 mt-2">{t('settings.sites.hint')}</p>
+        <p className="text-xs text-ink3 mt-2">{t('settings.sites.hint')}</p>
       </Group>
 
       <Group title={t('settings.group.privacy')}>
@@ -201,9 +201,9 @@ export default function SettingsSection() {
             checked={settings.skipSensitive}
             onChange={(e) => handleChange({ skipSensitive: e.target.checked })}
           />
-          <span className="text-sm leading-snug text-gray-300">
+          <span className="text-sm leading-snug text-ink">
             {t('settings.capture.skipSensitive')}
-            <span className="block text-xs text-gray-500 mt-0.5">
+            <span className="block text-xs text-ink2 mt-0.5">
               {t('settings.capture.skipSensitive.hint')}
             </span>
           </span>

@@ -168,9 +168,9 @@ export const pt_BR = {
   'toolbar.close.thisPage': 'Ocultar nesta página',
   'toolbar.close.thisSite': 'Nunca neste site',
 
-  'capture.menu.draft': '📝 Salvar rascunho',
-  'capture.menu.writeback': '↩️ Salvar no perfil',
-  'capture.menu.memory': '🧠 Memorizar esta página',
+  'capture.menu.draft': 'Salvar rascunho',
+  'capture.menu.writeback': 'Salvar no perfil',
+  'capture.menu.memory': 'Memorizar esta página',
 
   'capture.toast.draft.saved': 'Rascunho salvo com {n} campos',
   'capture.toast.draft.partial': '{n} salvos, {m} ignorados',

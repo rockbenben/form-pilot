@@ -168,9 +168,9 @@ export const ja = {
   'toolbar.close.thisPage': 'このページでは隠す',
   'toolbar.close.thisSite': 'このサイトでは表示しない',
 
-  'capture.menu.draft': '📝 下書き保存',
-  'capture.menu.writeback': '↩️ プロフィールへ保存',
-  'capture.menu.memory': '🧠 このページを記憶',
+  'capture.menu.draft': '下書き保存',
+  'capture.menu.writeback': 'プロフィールへ保存',
+  'capture.menu.memory': 'このページを記憶',
 
   'capture.toast.draft.saved': '{n} 件の下書きを保存しました',
   'capture.toast.draft.partial': '{n} 件保存、{m} 件スキップ',

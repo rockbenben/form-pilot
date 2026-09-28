@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { SaveIcon, UndoIcon, CheckIcon } from '@/lib/ui/icons';
 
 interface SaveMenuProps {
   t: (key: string) => string;
@@ -28,53 +29,23 @@ export default function SaveMenu({
     return () => document.removeEventListener('mousedown', onDown);
   }, [onClose]);
 
-  const containerStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '100%',
-    insetInlineStart: 0,
-    marginTop: '4px',
-    backgroundColor: '#1e1e3a',
-    border: '1px solid #374151',
-    borderRadius: '8px',
-    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-    minWidth: '180px',
-    overflow: 'hidden',
-    zIndex: 999999,
-  };
-
-  const itemStyle = (enabled: boolean): React.CSSProperties => ({
-    display: 'block',
-    width: '100%',
-    padding: '8px 14px',
-    background: 'none',
-    border: 'none',
-    color: enabled ? '#e5e7eb' : '#6b7280',
-    textAlign: 'start',
-    fontSize: '13px',
-    cursor: enabled ? 'pointer' : 'not-allowed',
-    whiteSpace: 'nowrap',
-  });
-
   return (
-    <div ref={ref} style={containerStyle}>
-      <button
-        style={itemStyle(true)}
-        onClick={(e) => { e.stopPropagation(); onSaveDraft(); }}
-      >
+    <div ref={ref} className="fp-menu" style={{ top: '100%', insetInlineStart: 0, marginTop: 6 }}>
+      <button className="fp-menu-item" onClick={(e) => { e.stopPropagation(); onSaveDraft(); }}>
+        <SaveIcon size={15} />
         {t('capture.menu.draft')}
       </button>
       <button
-        style={itemStyle(hasActiveResume)}
+        className="fp-menu-item"
         disabled={!hasActiveResume}
         title={!hasActiveResume ? t('capture.toast.noActiveResume') : undefined}
         onClick={(e) => { e.stopPropagation(); if (hasActiveResume) onWriteBack(); }}
       >
+        <UndoIcon size={15} />
         {t('capture.menu.writeback')}
       </button>
-      <button
-        style={itemStyle(true)}
-        onClick={(e) => { e.stopPropagation(); onSaveMemory(); }}
-      >
+      <button className="fp-menu-item" onClick={(e) => { e.stopPropagation(); onSaveMemory(); }}>
+        <CheckIcon size={15} />
         {t('capture.menu.memory')}
       </button>
     </div>

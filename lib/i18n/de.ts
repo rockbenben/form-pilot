@@ -49,7 +49,7 @@ export const de = {
   'basic.group.personal': 'Persönlich',
   'basic.group.status': 'Jobstatus',
   'basic.summary.placeholder': 'Ein bis zwei Sätze zu deinen Stärken — jedes Jobportal öffnet das Profil damit.',
-  'basic.socialLinks': 'Social Links',
+  'basic.socialLinks': 'Soziale Links',
   'basic.socialLinks.github': 'GitHub',
   'basic.socialLinks.linkedin': 'LinkedIn',
   'basic.socialLinks.portfolio': 'Portfolio',
@@ -168,9 +168,9 @@ export const de = {
   'toolbar.close.thisPage': 'Hier ausblenden',
   'toolbar.close.thisSite': 'Nie auf dieser Website',
 
-  'capture.menu.draft': '📝 Entwurf speichern',
-  'capture.menu.writeback': '↩️ Ins Profil speichern',
-  'capture.menu.memory': '🧠 Seite merken',
+  'capture.menu.draft': 'Entwurf speichern',
+  'capture.menu.writeback': 'Ins Profil speichern',
+  'capture.menu.memory': 'Seite merken',
 
   'capture.toast.draft.saved': 'Entwurf mit {n} Feldern gespeichert',
   'capture.toast.draft.partial': '{n} gespeichert, {m} übersprungen',

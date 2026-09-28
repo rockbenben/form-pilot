@@ -1,5 +1,6 @@
 // components/popup/CandidateListField.tsx
 import React, { useState } from 'react';
+import { StarIcon, EditIcon, TrashIcon } from '@/lib/ui/icons';
 import type { FieldCandidate } from '@/lib/capture/candidate';
 import { useI18n, arrow } from '@/lib/i18n';
 
@@ -65,10 +66,10 @@ export default function CandidateListField({
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between mb-1">
-        <label className="text-xs text-gray-500">{label}</label>
+        <label className="text-xs text-ink2">{label}</label>
         {!adding && (
           <button
-            className="text-xs text-blue-400 hover:text-blue-300"
+            className="text-xs text-link hover:text-link"
             onClick={() => setAdding(true)}
           >
             {t('profile.candidate.add')}
@@ -77,13 +78,13 @@ export default function CandidateListField({
       </div>
 
       {candidates.length === 0 && !adding && (
-        <div className="text-xs text-gray-500 italic">
+        <div className="text-xs text-ink2 italic">
           {t('profile.candidate.noCandidates')}
         </div>
       )}
 
       {candidates.length > 0 && (
-        <div className="space-y-1 bg-gray-900 border border-gray-800 rounded p-1">
+        <div className="space-y-1 bg-sunken border border-line rounded-lg p-1">
           {candidates.map((c) => {
             const isEditing = editingId === c.id;
             const isDefault = def?.id === c.id;
@@ -91,49 +92,49 @@ export default function CandidateListField({
             return (
               <div key={c.id} className="flex items-start gap-2 text-xs py-1 px-1">
                 {!isEditing && (
-                  <span className="text-gray-500 mt-0.5">{isDefault ? '●' : '○'}</span>
+                  <span className="text-ink2 mt-0.5">{isDefault ? '●' : '○'}</span>
                 )}
                 <div className="flex-1 min-w-0">
                   {isEditing ? (
                     <div className="space-y-1">
                       <input
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1"
+                        className="w-full bg-fill border border-line rounded-lg px-2 py-1"
                         value={editValue} onChange={(e) => setEditValue(e.target.value)}
                         placeholder={valueInputPlaceholder}
                       />
                       <input
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1"
+                        className="w-full bg-fill border border-line rounded-lg px-2 py-1"
                         value={editLabel} onChange={(e) => setEditLabel(e.target.value)}
                         placeholder={t('profile.candidate.labelPlaceholder')}
                       />
                       <div className="flex gap-2">
-                        <button className="text-blue-400" onClick={() => submitEdit(c.id)}>
+                        <button className="text-link" onClick={() => submitEdit(c.id)}>
                           {t('profile.candidate.save')}
                         </button>
-                        <button className="text-gray-400" onClick={() => setEditingId(null)}>
+                        <button className="text-ink2" onClick={() => setEditingId(null)}>
                           {t('profile.candidate.cancel')}
                         </button>
                       </div>
                     </div>
                   ) : (
                     <>
-                      <div className="text-gray-200 break-all">{c.value}</div>
-                      {c.label && <div className="text-gray-500">{c.label}</div>}
+                      <div className="text-ink break-all">{c.value}</div>
+                      {c.label && <div className="text-ink2">{c.label}</div>}
                     </>
                   )}
                 </div>
                 {!isEditing && (
-                  <div className="flex gap-2 shrink-0 text-gray-400">
+                  <div className="flex gap-2 shrink-0 text-ink2">
                     <button
                       title={isPinned ? t('candidate.picker.unpin') : t('candidate.picker.pin')}
                       onClick={() => onSetPin(isPinned ? null : c.id)}
-                    >{isPinned ? '★' : '☆'}</button>
-                    <button title={t('candidate.dashboard.editValue')} onClick={() => beginEdit(c)}>✎</button>
+                    ><StarIcon size={14} filled={isPinned} /></button>
+                    <button title={t('candidate.dashboard.editValue')} onClick={() => beginEdit(c)}><EditIcon size={14} /></button>
                     <button
                       title={t('candidate.picker.delete')}
                       onClick={() => onDelete(c.id)}
-                      className="text-red-400 hover:text-red-300"
-                    >🗑</button>
+                      className="text-danger hover:text-danger"
+                    ><TrashIcon size={14} /></button>
                   </div>
                 )}
               </div>
@@ -143,23 +144,23 @@ export default function CandidateListField({
       )}
 
       {adding && (
-        <div className="mt-1 space-y-1 bg-gray-900 border border-gray-800 rounded p-2">
+        <div className="mt-1 space-y-1 bg-sunken border border-line rounded-lg p-2">
           <input
-            className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
+            className="w-full bg-fill border border-line rounded-lg px-2 py-1 text-xs"
             value={addValue} onChange={(e) => setAddValue(e.target.value)}
             placeholder={valueInputPlaceholder}
             autoFocus
           />
           <input
-            className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs"
+            className="w-full bg-fill border border-line rounded-lg px-2 py-1 text-xs"
             value={addLabel} onChange={(e) => setAddLabel(e.target.value)}
             placeholder={t('profile.candidate.labelPlaceholder')}
           />
           <div className="flex gap-2 text-xs">
-            <button className="text-blue-400" onClick={submitAdd}>
+            <button className="text-link" onClick={submitAdd}>
               {t('profile.candidate.save')}
             </button>
-            <button className="text-gray-400" onClick={resetAdd}>
+            <button className="text-ink2" onClick={resetAdd}>
               {t('profile.candidate.cancel')}
             </button>
           </div>
@@ -167,21 +168,21 @@ export default function CandidateListField({
       )}
 
       {Object.keys(domainPrefs).length > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-800 text-xs">
-          <div className="text-gray-500 mb-1">{t('candidate.dashboard.domainOverrides')}</div>
+        <div className="mt-2 pt-2 border-t border-line text-xs">
+          <div className="text-ink2 mb-1">{t('candidate.dashboard.domainOverrides')}</div>
           <div className="space-y-1">
             {Object.entries(domainPrefs).map(([domain, candidateId]) => {
               const c = candidates.find((x) => x.id === candidateId);
               return (
                 <div key={domain} className="flex items-center justify-between">
-                  <span className="text-gray-300">
+                  <span className="text-ink">
                     {domain} {arrow(locale)} {c ? (c.label ? `${c.value} (${c.label})` : c.value) : `(${t('candidate.domainPref.missing')})`}
                   </span>
                   <button
-                    className="text-red-400 hover:text-red-300"
+                    className="text-danger hover:text-danger"
                     title={t('candidate.domainPref.clear')}
                     onClick={() => onClearDomainPref(domain)}
-                  >🗑</button>
+                  ><TrashIcon size={14} /></button>
                 </div>
               );
             })}

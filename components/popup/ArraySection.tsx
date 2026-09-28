@@ -49,12 +49,12 @@ export default function ArraySection<T>({
   return (
     <div className="space-y-2">
       {items.map((item, index) => (
-        <div key={index} className="border border-gray-800 rounded bg-gray-900">
+        <div key={index} className="border border-line rounded-lg bg-sunken">
           <div
-            className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-800 transition-colors"
+            className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-fill transition-colors"
             onClick={() => toggleExpand(index)}
           >
-            <span className="text-xs text-gray-300 truncate flex-1">
+            <span className="text-xs text-ink truncate flex-1">
               {getTitle(item, index)}
             </span>
             <div className="flex items-center gap-2 shrink-0 ms-2">
@@ -64,18 +64,18 @@ export default function ArraySection<T>({
                   e.stopPropagation();
                   handleDelete(index);
                 }}
-                className="text-gray-600 hover:text-red-400 text-sm transition-colors"
+                className="text-ink3 hover:text-danger text-sm transition-colors"
                 title={t('array.delete')}
               >
                 ×
               </button>
-              <span className="text-gray-600 text-xs">
+              <span className="text-ink3 text-xs">
                 {expanded === index ? '▲' : '▼'}
               </span>
             </div>
           </div>
           {expanded === index && (
-            <div className="px-3 pb-3 pt-1 border-t border-gray-800">
+            <div className="px-3 pb-3 pt-1 border-t border-line">
               {renderItem(item, (patch) => handleChange(index, patch))}
             </div>
           )}
@@ -84,7 +84,7 @@ export default function ArraySection<T>({
       <button
         type="button"
         onClick={handleAdd}
-        className="w-full py-1.5 text-xs text-gray-500 border border-dashed border-gray-700 rounded hover:border-blue-500 hover:text-blue-400 transition-colors"
+        className="w-full py-1.5 text-xs text-ink2 border border-dashed border-line rounded-lg hover:border-primary hover:text-link transition-colors"
       >
         {t('array.add')}
       </button>

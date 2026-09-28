@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { CloseIcon, BlockIcon } from '@/lib/ui/icons';
 
 export interface CloseMenuProps {
   t: (key: string) => string;
@@ -6,34 +7,6 @@ export interface CloseMenuProps {
   onNeverSite: () => void;
   onClose: () => void;
 }
-
-const menuStyle: React.CSSProperties = {
-  position: 'absolute',
-  bottom: '100%',
-  insetInlineEnd: 0,
-  marginBottom: '6px',
-  backgroundColor: '#1e1e3a',
-  borderRadius: '8px',
-  boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-  padding: '4px',
-  minWidth: '150px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2px',
-  zIndex: 999999,
-};
-
-const itemStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: '#e5e7eb',
-  fontSize: '12px',
-  textAlign: 'start',
-  padding: '7px 10px',
-  borderRadius: '5px',
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
 
 export default function CloseMenu({ t, onHidePage, onNeverSite, onClose }: CloseMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -53,11 +26,18 @@ export default function CloseMenu({ t, onHidePage, onNeverSite, onClose }: Close
   }, [onClose]);
 
   return (
-    <div ref={ref} style={menuStyle} onMouseDown={(e) => e.stopPropagation()}>
-      <button style={itemStyle} onClick={(e) => { e.stopPropagation(); onHidePage(); }}>
+    <div
+      ref={ref}
+      className="fp-menu"
+      style={{ bottom: '100%', insetInlineEnd: 0, marginBottom: 6 }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <button className="fp-menu-item" onClick={(e) => { e.stopPropagation(); onHidePage(); }}>
+        <CloseIcon size={15} />
         {t('toolbar.close.thisPage')}
       </button>
-      <button style={itemStyle} onClick={(e) => { e.stopPropagation(); onNeverSite(); }}>
+      <button className="fp-menu-item" onClick={(e) => { e.stopPropagation(); onNeverSite(); }}>
+        <BlockIcon size={15} />
         {t('toolbar.close.thisSite')}
       </button>
     </div>

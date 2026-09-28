@@ -168,9 +168,9 @@ export const ru = {
   'toolbar.close.thisPage': 'Скрыть здесь',
   'toolbar.close.thisSite': 'Никогда на этом сайте',
 
-  'capture.menu.draft': '📝 Сохранить черновик',
-  'capture.menu.writeback': '↩️ Сохранить в профиль',
-  'capture.menu.memory': '🧠 Запомнить страницу',
+  'capture.menu.draft': 'Сохранить черновик',
+  'capture.menu.writeback': 'Сохранить в профиль',
+  'capture.menu.memory': 'Запомнить страницу',
 
   'capture.toast.draft.saved': 'Черновик с {n} полями сохранён',
   'capture.toast.draft.partial': 'Сохранено {n}, пропущено {m}',

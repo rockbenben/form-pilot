@@ -36,6 +36,11 @@ search-terms.json
 # Test
 coverage/
 
+# Design QA evidence and the local visual-review fixture it shoots from
+.design-qa/
+playground/
+vite.playground.config.mts
+
 # Build artifacts
 *.tgz
 .superpowers/

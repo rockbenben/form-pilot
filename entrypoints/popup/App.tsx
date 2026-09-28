@@ -6,7 +6,9 @@ import { I18nContext, useI18nProvider } from '@/lib/i18n';
 import { countFields } from '@/lib/storage/resume-utils';
 import { getSettings, updateSettings } from '@/lib/storage/settings-store';
 import { resolveSiteOverride, resolveSiteOverrideKey, safeHostname } from '@/lib/capture/domain-match';
-import { STATUS_COLORS, STATUS_ICONS } from '@/lib/ui/field-status';
+import { STATUS_COLORS } from '@/lib/ui/field-status';
+import { STATUS_ICON, BoltIcon } from '@/lib/ui/icons';
+import type { FillStatus } from '@/lib/engine/adapters/types';
 
 function openDashboard(hash?: string) {
   const url = chrome.runtime.getURL('/dashboard.html') + (hash ? '#' + hash : '');
@@ -51,7 +53,7 @@ interface Segment {
   key: string;
   n: number;
   color: string;
-  icon: string;
+  status: FillStatus;
   labelKey: string;
 }
 
@@ -65,9 +67,13 @@ interface Segment {
  */
 function StatusBar({ segments, t }: { segments: Segment[]; t: (k: string) => string }) {
   const total = segments.reduce((s, x) => s + x.n, 0);
+  const StatusIconFor = ({ status }: { status: FillStatus }) => {
+    const C = STATUS_ICON[status];
+    return <C size={12} />;
+  };
   return (
     <>
-      <div className="flex h-1.5 gap-px overflow-hidden rounded-full bg-gray-800">
+      <div className="flex h-1.5 gap-px overflow-hidden rounded-full bg-fill">
         {total === 0 ? null : segments.map((s) =>
           s.n === 0 ? null : (
             <div
@@ -81,9 +87,9 @@ function StatusBar({ segments, t }: { segments: Segment[]; t: (k: string) => str
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
         {segments.map((s) => (
           <span key={s.key} className="flex items-baseline gap-1 text-xs">
-            <span aria-hidden className="text-[10px]">{s.icon}</span>
+            <span aria-hidden className="inline-flex"><StatusIconFor status={s.status} /></span>
             <span className={`font-semibold ${NUM}`} style={{ color: s.color }}>{s.n}</span>
-            <span className="text-gray-500">{t(s.labelKey)}</span>
+            <span className="text-ink2">{t(s.labelKey)}</span>
           </span>
         ))}
       </div>
@@ -172,16 +178,16 @@ export default function App() {
 
   const profileSegments: Segment[] = stats
     ? [
-        { key: 'filled', n: stats.filled, color: STATUS_COLORS.filled, icon: STATUS_ICONS.filled, labelKey: 'popup.stat.filled' },
-        { key: 'missing', n: stats.total - stats.filled, color: STATUS_COLORS.empty, icon: STATUS_ICONS.empty, labelKey: 'popup.stat.missing' },
+        { key: 'filled', n: stats.filled, color: STATUS_COLORS.filled, status: 'filled', labelKey: 'popup.stat.filled' },
+        { key: 'missing', n: stats.total - stats.filled, color: STATUS_COLORS.empty, status: 'empty', labelKey: 'popup.stat.missing' },
       ]
     : [];
 
   const resultSegments: Segment[] = fillResult
     ? [
-        { key: 'filled', n: fillResult.filled, color: STATUS_COLORS.filled, icon: STATUS_ICONS.filled, labelKey: 'popup.stat.filled' },
-        { key: 'uncertain', n: fillResult.uncertain, color: STATUS_COLORS.uncertain, icon: STATUS_ICONS.uncertain, labelKey: 'popup.stat.uncertain' },
-        { key: 'missing', n: fillResult.empty, color: STATUS_COLORS.empty, icon: STATUS_ICONS.empty, labelKey: 'popup.stat.missing' },
+        { key: 'filled', n: fillResult.filled, color: STATUS_COLORS.filled, status: 'filled', labelKey: 'popup.stat.filled' },
+        { key: 'uncertain', n: fillResult.uncertain, color: STATUS_COLORS.uncertain, status: 'uncertain', labelKey: 'popup.stat.uncertain' },
+        { key: 'missing', n: fillResult.empty, color: STATUS_COLORS.empty, status: 'empty', labelKey: 'popup.stat.missing' },
       ]
     : [];
 
@@ -190,38 +196,38 @@ export default function App() {
 
   return (
     <I18nContext.Provider value={i18n}>
-    <div className="w-80 bg-gray-950 text-gray-200 flex flex-col">
+    <div className="w-80 bg-canvas text-ink flex flex-col">
       {/* Header: brand + tagline */}
-      <div className="px-4 py-3 border-b border-gray-800 flex items-baseline gap-2">
-        <span className="text-base font-bold text-blue-400">⚡ {t('app.name')}</span>
-        <span className="text-xs text-gray-500 truncate">{t('popup.tagline')}</span>
+      <div className="px-4 py-3 border-b border-line flex items-baseline gap-2">
+        <span className="inline-flex items-center gap-1.5 text-base font-bold text-link"><BoltIcon size={16} />{t('app.name')}</span>
+        <span className="text-xs text-ink2 truncate">{t('popup.tagline')}</span>
       </div>
 
       {disabledDomain && (
-        <div className="mx-4 mt-3 px-3 py-2 bg-amber-950/40 border border-amber-900/60 rounded text-xs text-amber-300 flex items-center justify-between gap-2">
+        <div className="mx-4 mt-3 px-3 py-2 bg-warn-bg border border-warn-line rounded-lg text-xs text-warning flex items-center justify-between gap-2">
           <span className="truncate">{t('popup.siteDisabled')}</span>
-          <button onClick={handleUndoDisable} className="underline shrink-0 hover:text-amber-200">
+          <button onClick={handleUndoDisable} className="underline shrink-0 hover:text-warning">
             {t('popup.siteDisabled.undo')}
           </button>
         </div>
       )}
 
       {/* Profile + status. One bar, two readings — see StatusBar. */}
-      <div className="px-4 py-3 border-b border-gray-800">
+      <div className="px-4 py-3 border-b border-line">
         {activeResume ? (
           <>
             <div className="flex items-baseline justify-between gap-2 mb-2">
-              <span className="text-sm font-medium text-gray-100 truncate">
+              <span className="text-sm font-medium text-ink truncate">
                 {activeResume.meta.name || t('resume.default')}
               </span>
-              <span className="text-[11px] text-gray-500 shrink-0">
+              <span className="text-[11px] text-ink2 shrink-0">
                 {showingResult ? t('popup.result.title') : t('popup.currentResume')}
               </span>
             </div>
             <StatusBar segments={showingResult ? resultSegments : profileSegments} t={t} />
           </>
         ) : (
-          <div className="text-xs text-gray-500">{t('popup.noResume')}</div>
+          <div className="text-xs text-ink2">{t('popup.noResume')}</div>
         )}
       </div>
 
@@ -230,11 +236,11 @@ export default function App() {
         <button
           onClick={handleFill}
           disabled={filling || !activeResume}
-          className={`w-full py-2.5 px-3 rounded text-sm font-semibold transition-colors
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400
+          className={`w-full py-2.5 px-3 rounded-full text-sm font-semibold transition-colors
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
             ${activeResume
-              ? 'bg-blue-600 hover:bg-blue-500 text-white'
-              : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+              ? 'bg-primary hover:bg-primary-hover text-on-primary'
+              : 'bg-fill text-ink2 cursor-not-allowed'
             }
             ${filling ? 'opacity-60 cursor-wait' : ''}`}
         >
@@ -243,22 +249,22 @@ export default function App() {
         {/* A fill that matched nothing renders three zeros and an empty bar,
             which states the outcome but not what it means. Say it. */}
         {showingResult && resultTotal === 0 && (
-          <p className="mt-2 text-xs text-gray-400 leading-snug">{t('popup.fill.none')}</p>
+          <p className="mt-2 text-xs text-ink2 leading-snug">{t('popup.fill.none')}</p>
         )}
         {showingResult && fillResult.empty > 0 && (
-          <p className="mt-2 text-xs text-blue-300 leading-snug">
+          <p className="mt-2 text-xs text-link leading-snug">
             {t('popup.fill.empty', { n: fillResult.empty })}
           </p>
         )}
         {fillError && (
-          <p className="mt-2 text-xs text-red-400 leading-snug">{t('popup.fill.error')}</p>
+          <p className="mt-2 text-xs text-danger leading-snug">{t('popup.fill.error')}</p>
         )}
       </div>
 
       {/* Save actions — same three the toolbar's save menu offers, reachable
           without the toolbar being on screen. */}
       <div className="px-4 pt-4">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500 mb-1.5">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-ink2 mb-1.5">
           {t('popup.save.group')}
         </p>
         <div className="grid grid-cols-3 gap-1.5">
@@ -267,33 +273,33 @@ export default function App() {
               key={a.type}
               onClick={() => handleSave(a.type)}
               disabled={saving !== null}
-              className={`py-1.5 px-1 rounded text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-200
-                transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400
+              className={`py-1.5 px-1 rounded-full text-xs font-medium bg-fill hover:bg-fill-hover text-ink
+                transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary
                 ${saving !== null ? 'opacity-60 cursor-wait' : ''}`}
             >
               {t(a.labelKey)}
             </button>
           ))}
         </div>
-        {saveMsg && <p className="mt-1.5 text-xs text-gray-400">{saveMsg}</p>}
+        {saveMsg && <p className="mt-1.5 text-xs text-ink2">{saveMsg}</p>}
       </div>
 
       {/* Navigation, not actions — these leave the popup and open a tab, so
           they are quieter than the buttons above and sit below a rule. Filled
           in the same grey, they read as a fourth and fifth way to act on this
           page, which is what made the panel hard to scan. */}
-      <div className="mt-4 px-4 py-2.5 border-t border-gray-800 flex gap-1.5">
+      <div className="mt-4 px-4 py-2.5 border-t border-line flex gap-1.5">
         <button
           onClick={() => openDashboard()}
-          className="flex-1 py-1.5 px-3 rounded text-xs text-gray-400 hover:text-gray-100 hover:bg-gray-800/70
-            transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+          className="flex-1 py-1.5 px-3 rounded-lg text-xs text-ink2 hover:text-ink hover:bg-fill
+            transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('popup.edit')}
         </button>
         <button
           onClick={() => openDashboard('settings')}
-          className="flex-1 py-1.5 px-3 rounded text-xs text-gray-400 hover:text-gray-100 hover:bg-gray-800/70
-            transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+          className="flex-1 py-1.5 px-3 rounded-lg text-xs text-ink2 hover:text-ink hover:bg-fill
+            transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {t('nav.settings')}
         </button>
@@ -301,7 +307,7 @@ export default function App() {
 
       {/* First-run guidance, shown only while the profile is still empty. */}
       {isEmpty && (
-        <div className="mx-4 mb-4 px-3 py-2 bg-blue-950/40 border border-blue-900/60 rounded text-xs text-blue-300 leading-relaxed">
+        <div className="mx-4 mb-4 px-3 py-2 bg-tint border border-line rounded-lg text-xs text-link leading-relaxed">
           {t('popup.hint.firstTime')}
         </div>
       )}

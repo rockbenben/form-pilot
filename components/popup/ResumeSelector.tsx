@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { EditIcon } from '@/lib/ui/icons';
 import type { Resume } from '@/lib/storage/types';
 import { useI18n } from '@/lib/i18n';
 import { successorAfterDelete } from '@/lib/storage/resume-store';
@@ -62,17 +63,17 @@ export default function ResumeSelector({
   }
 
   return (
-    <div className="flex items-center gap-1 px-3 py-2 border-b border-gray-800 bg-gray-950 overflow-x-auto shrink-0">
+    <div className="flex items-center gap-1 px-3 py-2 border-b border-line bg-canvas overflow-x-auto shrink-0">
       {resumes.map((r) => {
         const isActive = activeId === r.meta.id;
         const isEditing = editingId === r.meta.id;
         return (
           <div
             key={r.meta.id}
-            className={`flex items-center gap-0.5 rounded whitespace-nowrap transition-colors
+            className={`flex items-center gap-0.5 rounded-lg whitespace-nowrap transition-colors
               ${isActive
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                ? 'bg-primary-hover text-on-primary'
+                : 'bg-fill text-ink2 hover:bg-fill-hover hover:text-ink'
               }`}
           >
             {isEditing ? (
@@ -87,7 +88,7 @@ export default function ResumeSelector({
                   if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
                 }}
                 maxLength={40}
-                className="px-2 py-1 text-xs bg-gray-900 text-gray-100 border border-blue-400 rounded outline-none w-32"
+                className="px-2 py-1 text-xs bg-sunken text-ink border border-primary rounded-lg outline-none w-32"
               />
             ) : (
               <>
@@ -103,14 +104,14 @@ export default function ResumeSelector({
                   onClick={(e) => { e.stopPropagation(); beginRename(r); }}
                   title={t('resume.rename')}
                   className={`pe-1 text-[10px] leading-none transition-opacity
-                    ${isActive ? 'text-white opacity-70 hover:opacity-100' : 'text-gray-400 opacity-50 hover:opacity-100'}`}
+                    ${isActive ? 'text-on-primary opacity-70 hover:opacity-100' : 'text-ink2 opacity-50 hover:opacity-100'}`}
                 >
-                  ✎
+                  <EditIcon size={12} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setPendingDelete(r); }}
                   className={`pe-2 ps-0.5 text-xs leading-none transition-opacity opacity-60 hover:opacity-100
-                    ${isActive ? 'text-white' : 'text-gray-400'}`}
+                    ${isActive ? 'text-on-primary' : 'text-ink2'}`}
                   title={t('resume.delete')}
                 >
                   ×
@@ -122,7 +123,7 @@ export default function ResumeSelector({
       })}
       <button
         onClick={onCreate}
-        className="px-3 py-1 text-xs rounded bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-blue-400 whitespace-nowrap transition-colors"
+        className="px-3 py-1 text-xs rounded-lg bg-fill text-ink2 hover:bg-fill-hover hover:text-link whitespace-nowrap transition-colors"
       >
         {t('resume.new')}
       </button>
@@ -181,34 +182,34 @@ function DeleteDialog({
       <div
         role="dialog"
         aria-modal="true"
-        className="w-80 rounded-lg border border-gray-700 bg-gray-900 shadow-xl overflow-hidden"
+        className="w-80 rounded-lg border border-line bg-sunken shadow-xl overflow-hidden"
       >
-        <div className="px-4 py-3 border-b border-gray-800">
-          <h2 className="text-sm font-semibold text-gray-100">{t('resume.delete.title')}</h2>
+        <div className="px-4 py-3 border-b border-line">
+          <h2 className="text-sm font-semibold text-ink">{t('resume.delete.title')}</h2>
         </div>
-        <div className="px-4 py-3 space-y-2 text-xs leading-relaxed text-gray-300">
+        <div className="px-4 py-3 space-y-2 text-xs leading-relaxed text-ink">
           <p>{t('resume.delete.body', { name, filled })}</p>
           {successor ? (
-            <p className="text-gray-400">
+            <p className="text-ink2">
               {t('resume.delete.successor', { name: successor.meta.name || t('resume.default') })}
             </p>
           ) : (
-            <p className="text-amber-300">{t('resume.delete.last')}</p>
+            <p className="text-warning">{t('resume.delete.last')}</p>
           )}
         </div>
-        <div className="px-4 py-3 flex justify-end gap-2 border-t border-gray-800">
+        <div className="px-4 py-3 flex justify-end gap-2 border-t border-line">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 rounded text-xs text-gray-300 hover:bg-gray-800 transition-colors
-              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+            className="px-3 py-1.5 rounded-lg text-xs text-ink hover:bg-fill transition-colors
+              focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {t('resume.delete.cancel')}
           </button>
           <button
             ref={confirmRef}
             onClick={onConfirm}
-            className="px-3 py-1.5 rounded text-xs font-medium bg-red-600 text-white hover:bg-red-500
-              transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-danger text-on-primary hover:bg-danger
+              transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
           >
             {t('resume.delete.confirmBtn')}
           </button>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { BoltIcon, SaveIcon, CloseIcon, CheckIcon, WarnIcon } from '@/lib/ui/icons';
 
 interface FloatingToolbarProps {
   /** Called when user drags toolbar to a new position (delta from initial). */
@@ -33,7 +34,7 @@ export default function FloatingToolbar({
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     // Only drag on the container itself, not buttons
-    if ((e.target as HTMLElement).tagName === 'BUTTON') return;
+    if ((e.target as HTMLElement).closest('button')) return;
     setDragging(true);
     lastPos.current = { x: e.clientX, y: e.clientY };
     e.preventDefault();
@@ -63,94 +64,51 @@ export default function FloatingToolbar({
     };
   }, [dragging, onPositionChange]);
 
-  const containerStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: '6px',
-    backgroundColor: '#1e1e3a',
-    borderRadius: '8px',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-    padding: '8px 10px',
-    cursor: dragging ? 'grabbing' : 'grab',
-    userSelect: 'none',
-  };
-
-  const fillBtnStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    backgroundColor: '#3b82f6',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '6px 12px',
-    fontSize: '13px',
-    fontWeight: 600,
-    cursor: filling ? 'not-allowed' : 'pointer',
-    opacity: filling ? 0.7 : 1,
-    outline: 'none',
-    whiteSpace: 'nowrap',
-  };
-
-  const progressBtnStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    backgroundColor: fillResult
-      ? fillResult.filled === fillResult.total && fillResult.total > 0
-        ? '#22c55e'
-        : '#6b7280'
-      : '#374151',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '6px 10px',
-    fontSize: '12px',
-    fontWeight: 500,
-    cursor: fillResult ? 'pointer' : 'default',
-    outline: 'none',
-    whiteSpace: 'nowrap',
-  };
+  const allFilled =
+    fillResult !== null && fillResult.total > 0 && fillResult.filled === fillResult.total;
+  const ProgressIcon = allFilled ? CheckIcon : WarnIcon;
 
   return (
-    <div ref={containerRef} style={containerStyle} onMouseDown={handleMouseDown}>
+    <div
+      ref={containerRef}
+      className="fp-toolbar"
+      data-dragging={dragging}
+      onMouseDown={handleMouseDown}
+    >
       <button
-        style={fillBtnStyle}
+        className="fp-btn fp-btn-primary"
         onClick={(e) => {
           e.stopPropagation();
           if (!filling) onFill();
         }}
+        disabled={filling}
         title={t('toolbar.fill')}
       >
-        <span>&#x26A1;</span>
-        <span>{filling ? '...' : t('toolbar.fill')}</span>
+        <BoltIcon size={15} />
+        <span>{filling ? '…' : t('toolbar.fill')}</span>
       </button>
       <button
-        style={progressBtnStyle}
+        className="fp-chip fp-chip-clickable"
         onClick={(e) => {
           e.stopPropagation();
           if (fillResult) onToggleResult();
         }}
+        disabled={!fillResult}
         title={fillResult ? t('toolbar.result') : t('toolbar.progress')}
+        style={fillResult ? { color: allFilled ? 'var(--fp-filled)' : 'var(--fp-ink)' } : undefined}
       >
-        {fillResult ? `${fillResult.filled}/${fillResult.total}` : '\u2014'}
+        {fillResult ? (
+          <>
+            <ProgressIcon size={14} />
+            {fillResult.filled}/{fillResult.total}
+          </>
+        ) : (
+          '—'
+        )}
       </button>
       <button
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          backgroundColor: saveMenuOpen ? '#6b7280' : '#4b5563',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '6px',
-          padding: '6px 10px',
-          fontSize: '13px',
-          cursor: 'pointer',
-          outline: 'none',
-          whiteSpace: 'nowrap',
-        }}
+        className="fp-icon-btn"
+        style={saveMenuOpen ? { background: 'var(--fp-fill)', color: 'var(--fp-ink)' } : undefined}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
@@ -158,19 +116,11 @@ export default function FloatingToolbar({
         }}
         title={t('toolbar.save')}
       >
-        &#x1F4BE;
+        <SaveIcon size={16} />
       </button>
       <button
-        style={{
-          background: 'none',
-          border: 'none',
-          color: closeMenuOpen ? '#fff' : '#9ca3af',
-          fontSize: '14px',
-          lineHeight: 1,
-          padding: '6px 4px',
-          cursor: 'pointer',
-          outline: 'none',
-        }}
+        className="fp-icon-btn"
+        style={closeMenuOpen ? { background: 'var(--fp-fill)', color: 'var(--fp-ink)' } : undefined}
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
@@ -178,7 +128,7 @@ export default function FloatingToolbar({
         }}
         title={t('toolbar.close')}
       >
-        &#x2715;
+        <CloseIcon size={16} />
       </button>
     </div>
   );

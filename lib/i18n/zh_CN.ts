@@ -185,9 +185,9 @@ export const zh_CN = {
   'toolbar.close.thisPage': '本页收起',
   'toolbar.close.thisSite': '本站不再显示',
 
-  'capture.menu.draft': '📝 保存草稿',
-  'capture.menu.writeback': '↩️ 保存到资料',
-  'capture.menu.memory': '🧠 记住本页表单',
+  'capture.menu.draft': '保存草稿',
+  'capture.menu.writeback': '保存到资料',
+  'capture.menu.memory': '记住本页表单',
 
   'capture.toast.draft.saved': '已保存 {n} 个字段的草稿',
   'capture.toast.draft.partial': '已保存 {n} 个，跳过 {m} 个',

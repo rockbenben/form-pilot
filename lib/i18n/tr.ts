@@ -168,9 +168,9 @@ export const tr = {
   'toolbar.close.thisPage': 'Bu sayfada gizle',
   'toolbar.close.thisSite': 'Bu sitede hiç gösterme',
 
-  'capture.menu.draft': '📝 Taslağı kaydet',
-  'capture.menu.writeback': '↩️ Profile kaydet',
-  'capture.menu.memory': '🧠 Bu sayfayı hatırla',
+  'capture.menu.draft': 'Taslağı kaydet',
+  'capture.menu.writeback': 'Profile kaydet',
+  'capture.menu.memory': 'Bu sayfayı hatırla',
 
   'capture.toast.draft.saved': '{n} alanlık taslak kaydedildi',
   'capture.toast.draft.partial': '{n} kaydedildi, {m} atlandı',

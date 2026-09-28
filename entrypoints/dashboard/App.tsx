@@ -1,4 +1,5 @@
 import './style.css';
+import { BoltIcon, SettingsIcon } from '@/lib/ui/icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { Resume, ResumePatch } from '@/lib/storage/types';
 import { I18nContext, useI18nProvider } from '@/lib/i18n';
@@ -268,7 +269,7 @@ export default function App() {
 
     if (!activeResume) {
       return (
-        <div className="flex items-center justify-center h-48 text-gray-500 text-sm">
+        <div className="flex items-center justify-center h-48 text-ink2 text-sm">
           {i18n.t('popup.noResume')}
         </div>
       );
@@ -342,16 +343,16 @@ export default function App() {
 
   return (
     <I18nContext.Provider value={i18n}>
-    <div className="min-h-screen bg-gray-950 text-gray-200 flex flex-col">
+    <div className="min-h-screen bg-canvas text-ink flex flex-col">
       {/* Top header */}
-      <div className="shrink-0 border-b border-gray-800 bg-gray-950">
+      <div className="shrink-0 border-b border-line bg-canvas">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
-          <span className="text-base font-bold text-blue-400">⚡ {i18n.t('app.name')}</span>
-          <span className="text-sm text-gray-500 hidden sm:inline">{i18n.t('app.subtitle')}</span>
+          <span className="inline-flex items-center gap-1.5 text-base font-bold text-link"><BoltIcon size={16} />{i18n.t('app.name')}</span>
+          <span className="text-sm text-ink2 hidden sm:inline">{i18n.t('app.subtitle')}</span>
           <div className="flex-1" />
           {/* Save indicator */}
-          {saveStatus === 'saving' && <span className="text-xs text-gray-500">{i18n.t('status.saving')}</span>}
-          {saveStatus === 'saved' && <span className="text-xs text-green-500">{i18n.t('status.saved')}</span>}
+          {saveStatus === 'saving' && <span className="text-xs text-ink2">{i18n.t('status.saving')}</span>}
+          {saveStatus === 'saved' && <span className="text-xs text-success">{i18n.t('status.saved')}</span>}
           {/* Resume selector in header */}
           <div className="flex items-center gap-2 min-w-0 overflow-hidden">
             <ResumeSelector
@@ -367,13 +368,13 @@ export default function App() {
           <button
             onClick={() => setSection('settings')}
             title={i18n.t('nav.settings')}
-            className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1
               ${section === 'settings'
-                ? 'bg-blue-500/20 text-blue-400'
-                : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                ? 'bg-tint text-link'
+                : 'bg-fill hover:bg-fill-hover text-ink'
               }`}
           >
-            <span>⚙️</span>
+            <SettingsIcon size={15} />
             <span className="hidden sm:inline">{i18n.t('nav.settings')}</span>
           </button>
         </div>

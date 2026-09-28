@@ -168,9 +168,9 @@ export const es = {
   'toolbar.close.thisPage': 'Ocultar en esta página',
   'toolbar.close.thisSite': 'Nunca en este sitio',
 
-  'capture.menu.draft': '📝 Guardar borrador',
-  'capture.menu.writeback': '↩️ Guardar en el perfil',
-  'capture.menu.memory': '🧠 Recordar esta página',
+  'capture.menu.draft': 'Guardar borrador',
+  'capture.menu.writeback': 'Guardar en el perfil',
+  'capture.menu.memory': 'Recordar esta página',
 
   'capture.toast.draft.saved': 'Borrador guardado con {n} campos',
   'capture.toast.draft.partial': '{n} guardados, {m} omitidos',

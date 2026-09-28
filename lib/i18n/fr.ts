@@ -168,9 +168,9 @@ export const fr = {
   'toolbar.close.thisPage': 'Masquer sur cette page',
   'toolbar.close.thisSite': 'Jamais sur ce site',
 
-  'capture.menu.draft': '📝 Enregistrer le brouillon',
-  'capture.menu.writeback': '↩️ Enregistrer au profil',
-  'capture.menu.memory': '🧠 Mémoriser cette page',
+  'capture.menu.draft': 'Enregistrer le brouillon',
+  'capture.menu.writeback': 'Enregistrer au profil',
+  'capture.menu.memory': 'Mémoriser cette page',
 
   'capture.toast.draft.saved': 'Brouillon enregistré avec {n} champs',
   'capture.toast.draft.partial': '{n} enregistrés, {m} ignorés',

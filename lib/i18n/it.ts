@@ -168,9 +168,9 @@ export const it = {
   'toolbar.close.thisPage': 'Nascondi su questa pagina',
   'toolbar.close.thisSite': 'Mai su questo sito',
 
-  'capture.menu.draft': '📝 Salva bozza',
-  'capture.menu.writeback': '↩️ Salva nel profilo',
-  'capture.menu.memory': '🧠 Ricorda questa pagina',
+  'capture.menu.draft': 'Salva bozza',
+  'capture.menu.writeback': 'Salva nel profilo',
+  'capture.menu.memory': 'Ricorda questa pagina',
 
   'capture.toast.draft.saved': 'Bozza salvata con {n} campi',
   'capture.toast.draft.partial': '{n} salvati, {m} ignorati',

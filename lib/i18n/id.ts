@@ -168,9 +168,9 @@ export const id = {
   'toolbar.close.thisPage': 'Sembunyikan di halaman ini',
   'toolbar.close.thisSite': 'Jangan tampilkan di situs ini',
 
-  'capture.menu.draft': '📝 Simpan Draf',
-  'capture.menu.writeback': '↩️ Simpan ke Profil',
-  'capture.menu.memory': '🧠 Ingat Halaman Ini',
+  'capture.menu.draft': 'Simpan Draf',
+  'capture.menu.writeback': 'Simpan ke Profil',
+  'capture.menu.memory': 'Ingat Halaman Ini',
 
   'capture.toast.draft.saved': 'Draf dengan {n} kolom tersimpan',
   'capture.toast.draft.partial': '{n} tersimpan, {m} dilewati',
@@ -248,7 +248,7 @@ export const id = {
   'candidate.dashboard.addCandidate': 'Tambah kandidat',
   'candidate.dashboard.domainOverrides': 'Penimpaan domain',
   'candidate.dashboard.candidatesCount': '{n} kandidat',
-  'candidate.dashboard.defaultLabel': 'Default: {value}',
+  'candidate.dashboard.defaultLabel': 'Bawaan: {value}',
   'candidate.dashboard.editValue': 'Edit nilai',
   'candidate.dashboard.valuePlaceholder': 'Nilai',
   'candidate.dashboard.displayValuePlaceholder': 'Teks tampilan (untuk select/radio)',

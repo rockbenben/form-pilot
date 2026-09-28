@@ -8,7 +8,7 @@ interface CustomFieldsProps {
 }
 
 const inputBase =
-  'bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors';
+  'bg-sunken border border-line rounded-lg px-2 py-1 text-xs text-ink placeholder-gray-600 focus:outline-none focus:border-primary transition-colors';
 
 export default function CustomFieldsSection({ data, onChange }: CustomFieldsProps) {
   const { t } = useI18n();
@@ -51,7 +51,7 @@ export default function CustomFieldsSection({ data, onChange }: CustomFieldsProp
             <button
               type="button"
               onClick={() => handleDelete(index)}
-              className="text-gray-600 hover:text-red-400 text-lg leading-none transition-colors shrink-0"
+              className="text-ink3 hover:text-danger text-lg leading-none transition-colors shrink-0"
               title={t('array.delete')}
             >
               ×
@@ -62,7 +62,7 @@ export default function CustomFieldsSection({ data, onChange }: CustomFieldsProp
       <button
         type="button"
         onClick={handleAdd}
-        className="mt-2 w-full py-1.5 text-xs text-gray-500 border border-dashed border-gray-700 rounded hover:border-blue-500 hover:text-blue-400 transition-colors"
+        className="mt-2 w-full py-1.5 text-xs text-ink2 border border-dashed border-line rounded-lg hover:border-primary hover:text-link transition-colors"
       >
         {t('custom.add')}
       </button>

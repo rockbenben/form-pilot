@@ -168,9 +168,9 @@ export const hi = {
   'toolbar.close.thisPage': 'इस पेज पर छिपाएँ',
   'toolbar.close.thisSite': 'इस साइट पर कभी नहीं',
 
-  'capture.menu.draft': '📝 ड्राफ़्ट सेव करें',
-  'capture.menu.writeback': '↩️ प्रोफ़ाइल में सेव करें',
-  'capture.menu.memory': '🧠 यह पेज याद रखें',
+  'capture.menu.draft': 'ड्राफ़्ट सेव करें',
+  'capture.menu.writeback': 'प्रोफ़ाइल में सेव करें',
+  'capture.menu.memory': 'यह पेज याद रखें',
 
   'capture.toast.draft.saved': '{n} फ़ील्ड वाला ड्राफ़्ट सेव हो गया',
   'capture.toast.draft.partial': '{n} सेव, {m} छोड़े',

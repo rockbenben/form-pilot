@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { StarIcon, EditIcon, TrashIcon } from '@/lib/ui/icons';
 import type { DraftSnapshot, PageMemoryEntry, CapturedField } from '@/lib/capture/types';
 import type { FormEntry, FieldCandidate } from '@/lib/storage/form-store';
 import type { FieldDomainPrefs } from '@/lib/storage/domain-prefs-store';
@@ -31,16 +32,16 @@ function displayValue(v: string): string {
 
 function FieldTable({ rows }: { rows: Array<{ label: string; value: string }> }) {
   if (rows.length === 0) {
-    return <div className="text-gray-500 text-xs py-2">—</div>;
+    return <div className="text-ink2 text-xs py-2">—</div>;
   }
   return (
-    <div className="mt-1 bg-gray-900 border border-gray-800 rounded p-2 space-y-1">
+    <div className="mt-1 bg-sunken border border-line rounded-lg p-2 space-y-1">
       {rows.map((r, i) => (
         <div key={i} className="flex gap-2 text-xs">
-          <span className="text-gray-500 shrink-0 w-32 truncate" title={r.label}>
+          <span className="text-ink2 shrink-0 w-32 truncate" title={r.label}>
             {r.label || '—'}
           </span>
-          <span className="text-gray-300 break-all" title={r.value}>
+          <span className="text-ink break-all" title={r.value}>
             {truncate(displayValue(r.value), 200)}
           </span>
         </div>
@@ -136,19 +137,19 @@ export default function SavedPagesSection() {
       <div className="flex gap-2 mb-4 flex-wrap">
         <button
           onClick={() => setTab('drafts')}
-          className={`px-3 py-1 rounded ${tab === 'drafts' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400'}`}
+          className={`px-3 py-1 rounded-lg ${tab === 'drafts' ? 'bg-tint text-link' : 'text-ink2'}`}
         >
           {t('savedPages.drafts.title')} ({drafts.length})
         </button>
         <button
           onClick={() => setTab('memory')}
-          className={`px-3 py-1 rounded ${tab === 'memory' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400'}`}
+          className={`px-3 py-1 rounded-lg ${tab === 'memory' ? 'bg-tint text-link' : 'text-ink2'}`}
         >
           {t('savedPages.memory.title')} ({Object.keys(memory).length})
         </button>
         <button
           onClick={() => setTab('form')}
-          className={`px-3 py-1 rounded ${tab === 'form' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-400'}`}
+          className={`px-3 py-1 rounded-lg ${tab === 'form' ? 'bg-tint text-link' : 'text-ink2'}`}
         >
           {t('savedPages.form.title')} ({sortedFormEntries.length})
         </button>
@@ -156,10 +157,10 @@ export default function SavedPagesSection() {
 
       {tab === 'drafts' && (
         drafts.length === 0 ? (
-          <div className="text-gray-500">{t('savedPages.drafts.empty')}</div>
+          <div className="text-ink2">{t('savedPages.drafts.empty')}</div>
         ) : (
           <table className="w-full">
-            <thead className="text-xs text-gray-500">
+            <thead className="text-xs text-ink2">
               <tr>
                 <th className="text-start p-1">{t('savedPages.column.url')}</th>
                 <th className="text-start p-1">{t('savedPages.column.savedAt')}</th>
@@ -173,20 +174,20 @@ export default function SavedPagesSection() {
                 const isOpen = expanded.has(key);
                 return (
                   <React.Fragment key={d.url}>
-                    <tr className="border-t border-gray-800">
+                    <tr className="border-t border-line">
                       <td className="p-1 truncate max-w-xs" title={d.url}>{d.url}</td>
                       <td className="p-1">{formatRelativeTime(d.savedAt, now, t)}</td>
                       <td className="p-1">{d.fields.length}</td>
                       <td className="p-1 space-x-2">
                         <button
                           onClick={() => toggleExpand(key)}
-                          className="text-blue-400 hover:text-blue-300"
+                          className="text-link hover:text-link"
                         >
                           {t('savedPages.action.view')}
                         </button>
                         <button
                           onClick={() => deleteDraft(d.url)}
-                          className="text-red-400 hover:text-red-300"
+                          className="text-danger hover:text-danger"
                         >
                           {t('savedPages.action.delete')}
                         </button>
@@ -209,10 +210,10 @@ export default function SavedPagesSection() {
 
       {tab === 'memory' && (
         Object.keys(memory).length === 0 ? (
-          <div className="text-gray-500">{t('savedPages.memory.empty')}</div>
+          <div className="text-ink2">{t('savedPages.memory.empty')}</div>
         ) : (
           <table className="w-full">
-            <thead className="text-xs text-gray-500">
+            <thead className="text-xs text-ink2">
               <tr>
                 <th className="text-start p-1">{t('savedPages.column.url')}</th>
                 <th className="text-start p-1">{t('savedPages.column.fields')}</th>
@@ -225,19 +226,19 @@ export default function SavedPagesSection() {
                 const isOpen = expanded.has(key);
                 return (
                   <React.Fragment key={url}>
-                    <tr className="border-t border-gray-800">
+                    <tr className="border-t border-line">
                       <td className="p-1 truncate max-w-xs" title={url}>{url}</td>
                       <td className="p-1">{entries.length}</td>
                       <td className="p-1 space-x-2">
                         <button
                           onClick={() => toggleExpand(key)}
-                          className="text-blue-400 hover:text-blue-300"
+                          className="text-link hover:text-link"
                         >
                           {t('savedPages.action.view')}
                         </button>
                         <button
                           onClick={() => deleteMemory(url)}
-                          className="text-red-400 hover:text-red-300"
+                          className="text-danger hover:text-danger"
                         >
                           {t('savedPages.action.delete')}
                         </button>
@@ -260,13 +261,13 @@ export default function SavedPagesSection() {
 
       {tab === 'form' && (
         sortedFormEntries.length === 0 ? (
-          <div className="text-gray-500">{t('savedPages.form.empty')}</div>
+          <div className="text-ink2">{t('savedPages.form.empty')}</div>
         ) : (
           <>
             <div className="flex justify-end mb-2">
               <button
                 onClick={clearAllFormEntries}
-                className="text-xs px-2 py-1 text-red-400 hover:text-red-300 border border-red-900/40 rounded"
+                className="text-xs px-2 py-1 text-danger hover:text-danger border border-danger-line rounded-lg"
               >
                 {t('savedPages.form.clearAll')}
               </button>
@@ -279,20 +280,20 @@ export default function SavedPagesSection() {
                 const defText = def ? displayValue(def.displayValue ?? def.value) : '—';
                 const domains = domainPrefs[e.signature] ?? {};
                 return (
-                  <div key={e.signature} className="border border-gray-800 rounded">
+                  <div key={e.signature} className="border border-line rounded-lg">
                     <button
-                      className="w-full text-start p-2 flex items-center justify-between hover:bg-gray-800/40"
+                      className="w-full text-start p-2 flex items-center justify-between hover:bg-fill"
                       onClick={() => toggleExpand(key)}
                     >
                       <div className="min-w-0">
                         <div className="font-medium truncate" title={e.label}>{e.label || '—'}</div>
-                        <div className="text-xs text-gray-500 truncate">
+                        <div className="text-xs text-ink2 truncate">
                           {t('candidate.dashboard.defaultLabel', { value: truncate(defText, 60) })}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 shrink-0">
+                      <div className="flex items-center gap-2 text-xs text-ink2 shrink-0">
                         <span>{t('candidate.dashboard.candidatesCount', { n: String(e.candidates.length) })}</span>
-                        {e.pinnedId && <span title={t('candidate.picker.pin')}>★</span>}
+                        {e.pinnedId && <span title={t('candidate.picker.pin')} className="inline-flex"><StarIcon size={13} /></span>}
                       </div>
                     </button>
                     {isOpen && (
@@ -380,7 +381,7 @@ function FormEntryPanel({
   };
 
   return (
-    <div className="border-t border-gray-800 p-2 space-y-3">
+    <div className="border-t border-line p-2 space-y-3">
       <div className="space-y-1">
         {entry.candidates.map((c) => {
           const editing = editingId === c.id;
@@ -390,32 +391,32 @@ function FormEntryPanel({
                 {editing ? (
                   <div className="space-y-1">
                     <input
-                      className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1"
+                      className="w-full bg-sunken border border-line rounded-lg px-2 py-1"
                       value={editValue} onChange={(ev) => setEditValue(ev.target.value)}
                       placeholder={t('candidate.dashboard.valuePlaceholder')}
                     />
                     {needsDisplay && (
                       <input
-                        className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1"
+                        className="w-full bg-sunken border border-line rounded-lg px-2 py-1"
                         value={editDisplayValue} onChange={(ev) => setEditDisplayValue(ev.target.value)}
                         placeholder={t('candidate.dashboard.displayValuePlaceholder')}
                       />
                     )}
                     <div className="flex gap-2">
-                      <button className="text-blue-400" onClick={() => submitEdit(c.id)}>
+                      <button className="text-link" onClick={() => submitEdit(c.id)}>
                         {t('candidate.dashboard.save')}
                       </button>
-                      <button className="text-gray-400" onClick={() => setEditingId(null)}>
+                      <button className="text-ink2" onClick={() => setEditingId(null)}>
                         {t('candidate.dashboard.cancel')}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="text-gray-200 break-all">
+                    <div className="text-ink break-all">
                       {c.displayValue ?? c.value}
                     </div>
-                    <div className="text-gray-500">
+                    <div className="text-ink2">
                       {t('candidate.picker.lastSeen', { domain: lastSeenDomain(c.lastUrl) })} ·{' '}
                       {t('candidate.picker.hitCountLabel', { n: String(c.hitCount) })} ·{' '}
                       {formatRelativeTime(c.updatedAt, now, t)}
@@ -424,19 +425,19 @@ function FormEntryPanel({
                 )}
               </div>
               {!editing && (
-                <div className="flex gap-2 shrink-0 text-gray-400">
-                  <button title={t('candidate.dashboard.editValue')} onClick={() => beginEdit(c)}>✎</button>
+                <div className="flex gap-2 shrink-0 text-ink2">
+                  <button title={t('candidate.dashboard.editValue')} onClick={() => beginEdit(c)}><EditIcon size={14} /></button>
                   <button
                     title={entry.pinnedId === c.id ? t('candidate.picker.unpin') : t('candidate.picker.pin')}
                     onClick={() => togglePin(c.id)}
                   >
-                    {entry.pinnedId === c.id ? '★' : '☆'}
+                    <StarIcon size={14} filled={entry.pinnedId === c.id} />
                   </button>
                   <button
                     title={t('candidate.picker.delete')}
                     onClick={() => deleteCandidate(c.id)}
-                    className="text-red-400 hover:text-red-300"
-                  >🗑</button>
+                    className="text-danger hover:text-danger"
+                  ><TrashIcon size={14} /></button>
                 </div>
               )}
             </div>
@@ -447,31 +448,31 @@ function FormEntryPanel({
       {adding ? (
         <div className="space-y-1">
           <input
-            className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs"
+            className="w-full bg-sunken border border-line rounded-lg px-2 py-1 text-xs"
             value={addValue} onChange={(ev) => setAddValue(ev.target.value)}
             placeholder={t('candidate.dashboard.valuePlaceholder')}
           />
           {needsDisplay && (
             <input
-              className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs"
+              className="w-full bg-sunken border border-line rounded-lg px-2 py-1 text-xs"
               value={addDisplayValue} onChange={(ev) => setAddDisplayValue(ev.target.value)}
               placeholder={t('candidate.dashboard.displayValuePlaceholder')}
             />
           )}
           <div className="flex gap-2 text-xs">
-            <button className="text-blue-400" onClick={submitAdd}>{t('candidate.dashboard.save')}</button>
-            <button className="text-gray-400" onClick={() => { setAdding(false); setAddValue(''); setAddDisplayValue(''); }}>{t('candidate.dashboard.cancel')}</button>
+            <button className="text-link" onClick={submitAdd}>{t('candidate.dashboard.save')}</button>
+            <button className="text-ink2" onClick={() => { setAdding(false); setAddValue(''); setAddDisplayValue(''); }}>{t('candidate.dashboard.cancel')}</button>
           </div>
         </div>
       ) : (
-        <button className="text-xs text-blue-400 hover:text-blue-300" onClick={() => setAdding(true)}>
+        <button className="text-xs text-link hover:text-link" onClick={() => setAdding(true)}>
           + {t('candidate.dashboard.addCandidate')}
         </button>
       )}
 
       {Object.keys(domains).length > 0 && (
-        <div className="pt-2 border-t border-gray-800">
-          <div className="text-xs text-gray-500 mb-1">
+        <div className="pt-2 border-t border-line">
+          <div className="text-xs text-ink2 mb-1">
             {t('candidate.dashboard.domainOverrides')}
           </div>
           <div className="space-y-1">
@@ -479,14 +480,14 @@ function FormEntryPanel({
               const cand = entry.candidates.find((c) => c.id === candidateId);
               return (
                 <div key={domain} className="flex items-center justify-between text-xs">
-                  <span className="text-gray-300">
+                  <span className="text-ink">
                     {domain} {arrow(locale)} {cand ? (cand.displayValue ?? cand.value) : `(${t('candidate.domainPref.missing')})`}
                   </span>
                   <button
-                    className="text-red-400 hover:text-red-300"
+                    className="text-danger hover:text-danger"
                     title={t('candidate.picker.delete')}
                     onClick={() => clearDomainOverride(domain)}
-                  >🗑</button>
+                  ><TrashIcon size={14} /></button>
                 </div>
               );
             })}
