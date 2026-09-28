@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width:1200px; height:630px; position:relative; overflow:hidden;
+    font-family:"Segoe UI", system-ui, -apple-system, "Microsoft YaHei", sans-serif;
+    background:#0e1128;
+    color:#fff;
+  }
+  .glow1 { position:absolute; width:900px; height:900px; left:-320px; top:-460px;
+    background:radial-gradient(circle, rgba(59,130,246,.35) 0%, rgba(59,130,246,0) 62%); }
+  .glow2 { position:absolute; width:820px; height:820px; right:-260px; bottom:-480px;
+    background:radial-gradient(circle, rgba(139,92,246,.30) 0%, rgba(139,92,246,0) 62%); }
+  .grid { position:absolute; inset:0;
+    background-image:linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+                     linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size:44px 44px; }
+
+  .stage { position:absolute; inset:0; display:flex; align-items:center; gap:64px; padding:0 72px; }
+
+  .left { width:560px; flex:none; }
+  .brand { display:flex; align-items:center; gap:22px; margin-bottom:26px; }
+  .brand img { width:84px; height:84px; border-radius:20px;
+    box-shadow:0 10px 34px rgba(59,130,246,.45); }
+  .brand h1 { font-size:62px; font-weight:800; letter-spacing:-1px; }
+  .brand h1 span { background:linear-gradient(90deg,#60a5fa,#a78bfa);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .tagline { font-size:27px; font-weight:600; line-height:1.35; color:#e5e9f5; margin-bottom:10px; }
+  .tagline-zh { font-size:18px; color:#8b93b8; margin-bottom:30px; }
+  .features { list-style:none; display:flex; flex-direction:column; gap:15px; }
+  .features li { display:flex; align-items:center; gap:14px; font-size:21px; color:#c4cbe4; }
+  .features .tick { width:30px; height:30px; flex:none; border-radius:9px;
+    background:rgba(34,197,94,.16); color:#4ade80; font-size:17px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; }
+
+  .right { flex:1; display:flex; justify-content:center; }
+  .form {
+    width:400px; background:#171b3a; border:1px solid rgba(255,255,255,.09);
+    border-radius:18px; padding:26px 28px; position:relative;
+    box-shadow:0 30px 80px rgba(0,0,0,.55);
+  }
+  .form .title { font-size:16px; font-weight:700; color:#98a2c9; margin-bottom:18px;
+    display:flex; align-items:center; justify-content:space-between; }
+  .form .title em { font-style:normal; font-size:12px; font-weight:600; color:#6b76a3;
+    background:rgba(255,255,255,.06); padding:4px 10px; border-radius:999px; }
+  .field { margin-bottom:14px; }
+  .field label { display:block; font-size:12.5px; color:#7d87ad; margin-bottom:5px; }
+  .field .box { display:flex; align-items:center; justify-content:space-between;
+    background:#0f1230; border:1px solid rgba(255,255,255,.10); border-radius:9px;
+    padding:10px 12px; font-size:15px; color:#e8ecfa; }
+  .field .box .ok { color:#4ade80; font-weight:800; font-size:14px; }
+  .field .box .pick { color:#60a5fa; font-size:11px; font-weight:700; }
+  .field .box.dim { color:#5b6488; }
+  .fillbtn { margin-top:20px; width:100%; text-align:center; padding:13px 0;
+    border-radius:11px; font-size:16px; font-weight:800; color:#fff;
+    background:linear-gradient(90deg,#3b82f6,#8b5cf6);
+    box-shadow:0 12px 30px rgba(99,102,241,.45); }
+  .bolt { position:absolute; right:-16px; top:-16px; width:56px; height:56px; border-radius:16px;
+    background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#3b2503;
+    font-size:30px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 12px 28px rgba(245,158,11,.5); transform:rotate(8deg); }
+
+  .footer { position:absolute; left:72px; right:72px; bottom:34px;
+    display:flex; align-items:center; gap:12px; font-size:15.5px; color:#7d87ad; }
+  .chip { border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:5px 14px;
+    font-size:14px; color:#aab3d6; background:rgba(255,255,255,.04); }
+  .chip b { color:#e5b83f; font-weight:700; }
+  .grow { flex:1; }
+  .store { color:#c4cbe4; font-weight:600; }
+</style>
+</head>
+<body>
+  <div class="glow1"></div><div class="glow2"></div><div class="grid"></div>
+
+  <div class="stage">
+    <div class="left">
+      <div class="brand">
+        <img src="/icon/128.png" alt="">
+        <h1>Form<span>Pilot</span></h1>
+      </div>
+      <div class="tagline">One-click resume autofill for every job application.</div>
+      <div class="tagline-zh">填一次，永远记住，随处复填 — 数据只留在你的浏览器里。</div>
+      <ul class="features">
+        <li><span class="tick">✓</span>Remembers every answer you've ever typed</li>
+        <li><span class="tick">✓</span>Works on Moka · Workday · Greenhouse · BOSS</li>
+        <li><span class="tick">✓</span>Draft save &amp; restore, per form, per URL</li>
+        <li><span class="tick">✓</span>ID numbers, captchas and passwords stay untouched</li>
+      </ul>
+    </div>
+
+    <div class="right">
+      <div class="form">
+        <div class="bolt">⚡</div>
+        <div class="title">Application form <em>FormPilot</em></div>
+        <div class="field">
+          <label>Name</label>
+          <div class="box"><span>Zhang Wei</span><span class="ok">✓</span></div>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <div class="box"><span>zhang.wei@mail.com&nbsp;&nbsp;<span class="pick">▾ work</span></span><span class="ok">✓</span></div>
+        </div>
+        <div class="field">
+          <label>Marital status</label>
+          <div class="box"><span>未婚&nbsp;&nbsp;<span class="pick">▾</span></span><span class="ok">✓</span></div>
+        </div>
+        <div class="field">
+          <label>Emergency contact</label>
+          <div class="box dim"><span>· · ·</span></div>
+        </div>
+        <div class="fillbtn">⚡ Fill everything</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="chip"><b>365</b> Open Source · #008</span>
+    <span class="chip">MIT License</span>
+    <span class="chip">Local-first</span>
+    <span class="grow"></span>
+    <span class="store">Also on the Chrome Web Store →</span>
+  </div>
+</body>
+</html>
